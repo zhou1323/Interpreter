@@ -1,0 +1,20 @@
+//测试标识符是否合法
+int a;
+double _a_;   //数字开头
+int a;     //下划线结尾
+int acom;  //非法字符
+
+int i=0xsdadg;
+while(i<6)
+{
+    write(i);
+    i=i+1;
+}
+
+//相同作用域内定义同名变量
+int i=10;
+
+/*
+output:
+报错:报错信息可能各异
+*/

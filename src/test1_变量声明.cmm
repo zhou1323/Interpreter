@@ -1,0 +1,35 @@
+
+int a@q;
+double rr;
+double i,j,k;
+j = 23;
+
+
+//测试不同作用域内同名变量隐藏
+int c ;
+c = 23;
+double[2] b;
+b[0] = 23;
+b[1] = 0;
+if(b[1] == 0){
+    double c = 23.5;
+    if(c == 23.5){
+        write(1);
+    }
+    else{
+        write(0);
+    }
+    double[1] b;
+    b[0] = 0.05;
+    if(b[0] == 0.05){
+        write(1);
+    }
+    else{
+        write(0);
+    }
+}
+/*
+output:
+1
+1
+*/

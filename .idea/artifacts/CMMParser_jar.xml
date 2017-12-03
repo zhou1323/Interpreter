@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" build-on-make="true" name="CMMParser:jar">
+    <output-path>$PROJECT_DIR$/out/aritifacts</output-path>
+    <root id="archive" name="CMMParser.jar">
+      <element id="module-output" name="CMMParser" />
+    </root>
+  </artifact>
+</component>
