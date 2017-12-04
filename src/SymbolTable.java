@@ -1,29 +1,71 @@
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import com.sun.org.apache.xpath.internal.operations.And;
 
 public class SymbolTable {
-	private HashMap<String,Symbol> map=new HashMap<String,Symbol>();
+	private HashMap<String,List<Symbol>> map=new HashMap<String,List<Symbol>>();
 	
 	public Symbol get(String s) {
-		return map.get(s);
+		List<Symbol> temp=map.get(s);
+		return temp.get(temp.size()-1);
 	}
 	
 	public void put(String s,Symbol symbol) {
-		map.put(s, symbol);
+		List<Symbol> temp;
+		if(contains(s)) 
+			temp=map.get(s);
+		else
+			temp=new ArrayList<Symbol>();
+		if(contains(s)&&get(s).getScale()==symbol.getScale()) {
+			;
+		}
+		else
+			temp.add(symbol);
+		map.put(s, temp);
 	}
 	
+	public void remove(String s) {
+		if(contains(s)) {
+			List<Symbol> temp=map.get(s);
+			temp.remove(temp.size()-1);
+			map.put(s, temp);
+		}
+	}
+	
+	public void removeAtLevel(int i) {
+		if(!map.isEmpty()) {
+			Iterator<Map.Entry<String,List<Symbol>>> iter = map.entrySet().iterator();
+			while (iter.hasNext()) {
+				Map.Entry<String,List<Symbol>> entry = (Map.Entry<String,List<Symbol>>) iter.next();
+				
+				String key = entry.getKey();
+				List<Symbol> val = entry.getValue();
+				for (Symbol symbol : val) {
+					if(symbol.getScale()==i) {
+						val.remove(symbol);
+						map.put(key, val);
+						break;
+					}
+				}
+			}
+		}
+	}
 	public boolean contains(String s) {
-		return map.containsKey(s);
+		if(map.containsKey(s) && !map.get(s).isEmpty()) {
+			return true;
+		}
+		return false;
 	}
 	public void printTable () {
-		Iterator<Map.Entry<String,Symbol>> iter = map.entrySet().iterator();
+		Iterator<Map.Entry<String,List<Symbol>>> iter = map.entrySet().iterator();
 		while (iter.hasNext()) {
-			Map.Entry<String,Symbol> entry = (Map.Entry<String,Symbol>) iter.next();
+			Map.Entry<String,List<Symbol>> entry = (Map.Entry<String,List<Symbol>>) iter.next();
 			String key = entry.getKey();
-			Symbol val = entry.getValue();
+			List<Symbol> val = entry.getValue();
 			System.out.println("The key is: "+key+" , the value is: "+val.toString());
 		}
 	}

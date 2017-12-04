@@ -16,8 +16,8 @@ public class test {
             Parser parser = new Parser(path);
             
             sematics(parser);
-            //TreeNode treeNode = parser.parseProgram();
-            //parse(treeNode);
+            TreeNode treeNode = parser.parseProgram();
+            parse(treeNode);
         }else{
             System.out.println("arguement missing");
         }

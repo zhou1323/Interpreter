@@ -12,7 +12,7 @@ public enum TokenType {
     //评论符号 // /* */
     SINGLE_COMMENT, MUL_COMMENT,
     //保留字
-    IF, ELSE, WHILE, READ, WRITE, INT, DOUBLE, BREAK, TRUE, FALSE, BOOL,
+    IF, ELSE, FOR,WHILE, READ, WRITE, INT, DOUBLE, BREAK, TRUE, FALSE, BOOL,
     //变量 文档结束符 数字
     IDENT, END_OF_DOC, INT_NUM, DOUBLE_NUM,
     //错误字符

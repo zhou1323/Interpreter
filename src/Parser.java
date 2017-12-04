@@ -128,6 +128,9 @@ public class Parser{
                 case WHILE:
                     childNode = parseWhileStmt();
                     break;
+                case FOR:
+                	childNode=parseForStmt();
+                    break;
                 case READ:
                     childNode = parseReadStmt();
                     break;
@@ -158,6 +161,77 @@ public class Parser{
             return stmtNode;
     }
 
+  //ForStmt-> for ( Decl|Assign;LogExpr;var++|var--)Stmt
+    private TreeNode parseForStmt() throws ParserException{
+        TreeNode forStmtNode = new TreeNode(NodeType.FOR_STMT,"for_stmt",null);
+        List<TreeNode> children = forStmtNode.getChildren();
+        consumeNextToken(TokenType.FOR);
+        consumeNextToken(TokenType.L_PAREN);
+        children.add(new TreeNode(NodeType.FOR,"for",forStmtNode));
+        children.add(new TreeNode(NodeType.L_PAREN,"(",forStmtNode));
+        if(getNextTokenType()==TokenType.IDENT){
+            TreeNode expr=parseAssignStmt();  //for(assignStmt
+            expr.setParent(forStmtNode);
+            children.add(expr);}
+        else if((getNextTokenType()==TokenType.INT)||(getNextTokenType()==TokenType.DOUBLE)){
+            TreeNode expr=parseVarDecl();  //for(assignStmt
+            expr.setParent(forStmtNode);
+            children.add(expr);}
+        TreeNode exprlog=parseLogExpr(); // for(assignstmt LogExpr
+        exprlog.setParent(forStmtNode);
+        children.add(exprlog);
+        consumeNextToken(TokenType.SEMICOLON);
+        children.add(new TreeNode(NodeType.SEMICOLON,";",forStmtNode));
+        if(getNextTokenType()==TokenType.IDENT) {
+            TokenType tokenType = this.tokenListIterator.next().getTokenType();
+            TokenType tokenType1 = this.tokenListIterator.next().getTokenType();
+            this.tokenListIterator.previous();
+            this.tokenListIterator.previous();
+            if(tokenType1==TokenType.ASSIGN){
+                TreeNode value = parseAddStmt();
+                value.setParent(forStmtNode);
+                children.add(value);}
+          /*  else if((tokenType1==TokenType.PLUS)||(tokenType1==TokenType.MINUS)){
+                TreeNode value = parseAddStmt();
+                value.setParent(forStmtNode);
+                children.add(value);}*/
+        }
+        consumeNextToken(TokenType.R_PAREN);
+        children.add(new TreeNode(NodeType.R_PAREN,")",forStmtNode));
+        TreeNode stmt = parseStmt();
+        stmt.setParent(forStmtNode);
+        children.add(stmt);
+
+
+        return forStmtNode;
+    }
+
+    private TreeNode parseAddStmt()throws ParserException{
+        TreeNode addStmtNode = new TreeNode(NodeType.ADD_STMT,"add_stmt",null);
+        List<TreeNode> children = addStmtNode.getChildren();
+        TreeNode value = parseValue();    // i
+        value.setParent(addStmtNode);
+        children.add(value);
+        consumeNextToken(TokenType.ASSIGN);
+        children.add(new TreeNode(NodeType.ASSIGN,"=",addStmtNode));
+        TreeNode expr = parseAriExpr();
+        expr.setParent(addStmtNode);
+        children.add(expr);
+    /*    if(getNextTokenType()==TokenType.PLUS) {
+            consumeNextToken(TokenType.PLUS);
+            consumeNextToken(TokenType.PLUS);
+            children.add(new TreeNode(NodeType.PLUS,"+",addStmtNode));
+            children.add(new TreeNode(NodeType.PLUS,"+",addStmtNode));
+        }
+        else if(getNextTokenType()==TokenType.MINUS) {
+            consumeNextToken(TokenType.MINUS);
+            consumeNextToken(TokenType.MINUS);
+            children.add(new TreeNode(NodeType.MINUS,"-",addStmtNode));
+            children.add(new TreeNode(NodeType.MINUS,"-",addStmtNode));
+        }*/
+
+        return addStmtNode;
+    }
     /**
      * 解析if语句并生成树节点
      * IfStmt --> if (LogExpr) Stmt [ else Stmt ]
@@ -559,15 +633,20 @@ public class Parser{
             consumeNextToken(TokenType.FALSE);
             logExprChildren.add(new TreeNode(NodeType.FALSE,"false",logExprNode));
         }else{
-            TreeNode ariExpr1 = parseAriExpr();
+            TreeNode ariExpr1 = parseAriExpr();   
             ariExpr1.setParent(logExprNode);
             logExprChildren.add(ariExpr1);
-            TreeNode logOp = parseLogOp();
-            logOp.setParent(logExprNode);
-            logExprChildren.add(logOp);
-            TreeNode ariExpr2 = parseAriExpr();
-            ariExpr2.setParent(logExprNode);
-            logExprChildren.add(ariExpr2);
+            if(getNextTokenType()==TokenType.R_PAREN) {
+            	;
+            }
+            else {
+	            TreeNode logOp = parseLogOp();
+	            logOp.setParent(logExprNode);
+	            logExprChildren.add(logOp);
+	            TreeNode ariExpr2 = parseAriExpr();
+	            ariExpr2.setParent(logExprNode);
+	            logExprChildren.add(ariExpr2);
+            }
         }
         return logExprNode;
     }

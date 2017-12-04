@@ -13,6 +13,7 @@ public enum NodeType {
     IF_STMT,   //ifÓï¾ä
     WHILE_STMT,   //whileÓï¾ä
     FOR_STMT, 	//forÓï¾ä
+    ADD_STMT,
     BREAK_STMT,   //breakÓï¾ä
     WRITE_STMT,   //writeÓï¾ä
     READ_STMT,   //readÓï¾ä
@@ -32,7 +33,7 @@ public enum NodeType {
     //ÌØÊâ·ûºÅ { } [ ] ( ) ; ,
     L_BRACE, R_BRACE, L_BRACKET, R_BRACKET, L_PAREN, R_PAREN, SEMICOLON, COMMA,
     //±£Áô×Ö
-    IF, ELSE, WHILE, READ, WRITE, INT, DOUBLE, BREAK, TRUE, FALSE,BOOL,
+    IF, ELSE, FOR,WHILE, READ, WRITE, INT, DOUBLE, BREAK, TRUE, FALSE,BOOL,
     //±äÁ¿  Êý×Ö
     IDENT, INT_NUM, DOUBLE_NUM,
     //´íÎó×Ö·û

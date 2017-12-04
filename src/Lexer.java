@@ -143,6 +143,8 @@ public class Lexer{
                             return new Token(TokenType.IF,"if",charReader.getLineNum(),charReader.getPosition()-2);
                         case "else":
                             return new Token(TokenType.ELSE,"else",charReader.getLineNum(),charReader.getPosition()-4);
+                        case "for":
+                            return new Token(TokenType.FOR,"for",charReader.getLineNum(),charReader.getPosition()-3);
                         case "while":
                             return new Token(TokenType.WHILE,"while",charReader.getLineNum(),charReader.getPosition()-5);
                         case "break":
