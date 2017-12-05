@@ -83,7 +83,7 @@ public class Parser{
             getTokenListIterator().next();
         }
         if(getNextTokenType()==tokenType){
-           getTokenListIterator().next();
+            getTokenListIterator().next();
         }else{
             Token token = getTokenListIterator().next();
             throw new ParserException("Line:"+token.getLineNum()+
@@ -113,7 +113,7 @@ public class Parser{
     /**
      * 解析STMT
      * Stmt	 --> VarDecl | IfStmt | WhileStmt | BreakStmt | AssignStmt |
-                    ReadStmt | WriteStmt | StmtBlock
+     ReadStmt | WriteStmt | StmtBlock
      * @return
      * @throws ParserException
      */
@@ -121,47 +121,47 @@ public class Parser{
         TreeNode stmtNode = new TreeNode(NodeType.STMT,"stmt",null);
         List<TreeNode> stmtNodeChildren = stmtNode.getChildren();
         TreeNode childNode;
-            switch (getNextTokenType()) {
-                case IF:
-                    childNode = parseIfStmt();
-                    break;
-                case WHILE:
-                    childNode = parseWhileStmt();
-                    break;
-                case FOR:
-                	childNode=parseForStmt();
-                    break;
-                case READ:
-                    childNode = parseReadStmt();
-                    break;
-                case WRITE:
-                    childNode = parseWriteStmt();
-                    break;
-                case BREAK:
-                    childNode = parseBreakStmt();
-                    break;
-                case L_BRACE:
-                    childNode = parseStmtBlock();
-                    break;
-                case INT:
-                case DOUBLE:
-                case BOOL:
-                    childNode = parseVarDecl();
-                    break;
-                case IDENT:
-                    childNode = parseAssignStmt();
-                    break;
-                case END_OF_DOC:
+        switch (getNextTokenType()) {
+            case IF:
+                childNode = parseIfStmt();
+                break;
+            case WHILE:
+                childNode = parseWhileStmt();
+                break;
+            case FOR:
+                childNode=parseForStmt();
+                break;
+            case READ:
+                childNode = parseReadStmt();
+                break;
+            case WRITE:
+                childNode = parseWriteStmt();
+                break;
+            case BREAK:
+                childNode = parseBreakStmt();
+                break;
+            case L_BRACE:
+                childNode = parseStmtBlock();
+                break;
+            case INT:
+            case DOUBLE:
+            case BOOL:
+                childNode = parseVarDecl();
+                break;
+            case IDENT:
+                childNode = parseAssignStmt();
+                break;
+            case END_OF_DOC:
 
-                default:
-                    throw new ParserException("");
-            }
-            childNode.setParent(stmtNode);
-            stmtNodeChildren.add(childNode);
-            return stmtNode;
+            default:
+                throw new ParserException("");
+        }
+        childNode.setParent(stmtNode);
+        stmtNodeChildren.add(childNode);
+        return stmtNode;
     }
 
-  //ForStmt-> for ( Decl|Assign;LogExpr;var++|var--)Stmt
+    //ForStmt-> for ( Decl|Assign;LogExpr;var++|var--)Stmt
     private TreeNode parseForStmt() throws ParserException{
         TreeNode forStmtNode = new TreeNode(NodeType.FOR_STMT,"for_stmt",null);
         List<TreeNode> children = forStmtNode.getChildren();
@@ -573,21 +573,21 @@ public class Parser{
         TreeNode factorNode = new TreeNode(NodeType.FACTOR,"F",null);
         List<TreeNode> facNodeChildren = factorNode.getChildren();
         switch (getNextTokenType()){
-	        case TRUE:
-	            consumeNextToken(TokenType.TRUE);
-	            facNodeChildren.add(new TreeNode(NodeType.TRUE,"true",factorNode));
-	            break;
-	        case FALSE:
-	            consumeNextToken(TokenType.FALSE);
-	            facNodeChildren.add(new TreeNode(NodeType.FALSE,"false",factorNode));
-	            break;
-            
-        	case IDENT:
+            case TRUE:
+                consumeNextToken(TokenType.TRUE);
+                facNodeChildren.add(new TreeNode(NodeType.TRUE,"true",factorNode));
+                break;
+            case FALSE:
+                consumeNextToken(TokenType.FALSE);
+                facNodeChildren.add(new TreeNode(NodeType.FALSE,"false",factorNode));
+                break;
+
+            case IDENT:
                 TreeNode value = parseValue();
                 value.setParent(factorNode);
                 facNodeChildren.add(value);
                 break;
-            
+
             case INT_NUM:
                 String intvalue = getNextTokenValue();
                 consumeNextToken(TokenType.INT_NUM);
@@ -633,19 +633,19 @@ public class Parser{
             consumeNextToken(TokenType.FALSE);
             logExprChildren.add(new TreeNode(NodeType.FALSE,"false",logExprNode));
         }else{
-            TreeNode ariExpr1 = parseAriExpr();   
+            TreeNode ariExpr1 = parseAriExpr();
             ariExpr1.setParent(logExprNode);
             logExprChildren.add(ariExpr1);
             if(getNextTokenType()==TokenType.R_PAREN) {
-            	;
+                ;
             }
             else {
-	            TreeNode logOp = parseLogOp();
-	            logOp.setParent(logExprNode);
-	            logExprChildren.add(logOp);
-	            TreeNode ariExpr2 = parseAriExpr();
-	            ariExpr2.setParent(logExprNode);
-	            logExprChildren.add(ariExpr2);
+                TreeNode logOp = parseLogOp();
+                logOp.setParent(logExprNode);
+                logExprChildren.add(logOp);
+                TreeNode ariExpr2 = parseAriExpr();
+                ariExpr2.setParent(logExprNode);
+                logExprChildren.add(ariExpr2);
             }
         }
         return logExprNode;
@@ -724,7 +724,7 @@ public class Parser{
     /**
      * 解析type语句
      * Type			int ArrayType| double ArrayType  //数组里面可以是表达式
-       ArrayType    [AriExpr] ArrayType | null
+     ArrayType    [AriExpr] ArrayType | null
 
      * @return
      * @throws ParserException

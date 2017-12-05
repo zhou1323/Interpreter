@@ -47,7 +47,12 @@ public class SymbolTable {
 				for (Symbol symbol : val) {
 					if(symbol.getScale()==i) {
 						val.remove(symbol);
+
 						map.put(key, val);
+						if(val.isEmpty()) {
+							map.remove(key);
+						}
+						
 						break;
 					}
 				}
