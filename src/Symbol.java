@@ -8,18 +8,20 @@ public class Symbol {
 	private int scale;
 	private List<Object> value=new ArrayList<Object>();
 	private int arrayIndex;
+	private  String funcName;
 	
 	public Symbol() {
 		;
 	}
 	
-	public Symbol(String type, String name, int scale, List<Object> value, int arrayIndex) {
+	public Symbol(String type, String name, int scale, List<Object> value, int arrayIndex,String funcName) {
 		super();
 		this.type = type;
 		this.name = name;
 		this.scale = scale;
 		this.value = value;
 		this.arrayIndex = arrayIndex;
+		this.funcName=funcName;
 	}
 	
 	public String getType() {
@@ -27,6 +29,12 @@ public class Symbol {
 	}
 	public void setType(String type) {
 		this.type = type;
+	}
+	public String getFuncName() {
+		return funcName;
+	}
+	public void setFuncName(String funcName) {
+		this.funcName = funcName;
 	}
 	public String getName() {
 		return name;

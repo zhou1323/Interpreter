@@ -13,11 +13,9 @@ public class test {
         String path;
         if(args.length==1){
             path = args[0];
-            Parser parser = new Parser(path);
             
-           sematics(parser);
-           TreeNode treeNode = parser.parseProgram();
-           parse(treeNode);
+           sematics(path);
+           
         }else{
             System.out.println("arguement missing");
         }
@@ -27,10 +25,12 @@ public class test {
 
     }
 
-    public static void sematics(Parser parser) throws Exception {
-    	Sematics s=new Sematics(parser);
+    public static void sematics(String path) throws Exception {
+    	Sematics s=new Sematics(path);
     	SymbolTable symbols=s.getTable();
     	symbols.printTable();
+    	TreeNode treeNode = s.getParser().parseProgram();
+        parse(treeNode);
     }
     public static void parse(TreeNode treeNode) {
     	System.out.print("    "+treeNode.getValue());

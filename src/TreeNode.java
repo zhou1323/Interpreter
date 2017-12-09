@@ -9,13 +9,16 @@ public class TreeNode {
     private TreeNode parent;   //父节点
     private List<TreeNode> children;    //子节点列表
     private String value;       //结点值
-
+    private int lineNum;
+    private int position;
     //构造函数，初始化结点类型，值，和父节点
-    public TreeNode(NodeType nodeType,String value,TreeNode parent) {
+    public TreeNode(NodeType nodeType,String value,TreeNode parent,int lineNum,int position) {
         this.nodeType = nodeType;
         this.children = new ArrayList<TreeNode>();
         this.value = value;
         this.parent = parent;
+        this.lineNum=lineNum;
+        this.position=position;
     }
 
     public NodeType getNodeType() {
@@ -54,7 +57,15 @@ public class TreeNode {
     public void setValue(String value) {
         this.value = value;
     }
-    
+
+    public int getLineNum(){return lineNum;}
+
+    public void setLineNum(){this.lineNum=lineNum;}
+
+    public int getPosition(){return position;}
+
+    public void setPosition(){this.position=position;}
+
     public TreeNode getNthChild(int index){
         if(index<getChildren().size()){
             return getChildren().get(index);

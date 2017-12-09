@@ -60,6 +60,21 @@ public class Parser{
         }
         return null;
     }
+
+    private Token getCurrToken(){
+        if(this.tokenListIterator.hasNext()){
+            this.tokenListIterator.next();
+            Token token=this.tokenListIterator.previous();
+            return token;
+        }
+        else{
+            this.tokenListIterator.previous();
+            Token currToken=this.tokenListIterator.next();
+            return currToken;
+        }
+       // return null;
+    }
+
     /**
      * 获取下一个token的类型，迭代器游标不移动
      * @return tokenType
@@ -98,7 +113,7 @@ public class Parser{
      * @throws ParserException
      */
     public TreeNode parseProgram() throws ParserException{
-        TreeNode progNode = new TreeNode(NodeType.PROGRAM,"program",null);
+        TreeNode progNode = new TreeNode(NodeType.PROGRAM,"program",null,getCurrToken().getLineNum(), getCurrToken().getPosition());
         List<TreeNode> progNodeChildren = progNode.getChildren();
         while(getNextTokenType()!=TokenType.END_OF_DOC){
             while(getNextTokenType()==TokenType.MUL_COMMENT||getNextTokenType()==TokenType.SINGLE_COMMENT){
@@ -113,64 +128,77 @@ public class Parser{
     /**
      * 解析STMT
      * Stmt	 --> VarDecl | IfStmt | WhileStmt | BreakStmt | AssignStmt |
-     ReadStmt | WriteStmt | StmtBlock
+     ReadStmt | WriteStmt | StmtBlock |FuncStmt
      * @return
      * @throws ParserException
      */
     private TreeNode parseStmt() throws ParserException{
-        TreeNode stmtNode = new TreeNode(NodeType.STMT,"stmt",null);
-        List<TreeNode> stmtNodeChildren = stmtNode.getChildren();
-        TreeNode childNode;
-        switch (getNextTokenType()) {
-            case IF:
-                childNode = parseIfStmt();
-                break;
-            case WHILE:
-                childNode = parseWhileStmt();
-                break;
-            case FOR:
-                childNode=parseForStmt();
-                break;
-            case READ:
-                childNode = parseReadStmt();
-                break;
-            case WRITE:
-                childNode = parseWriteStmt();
-                break;
-            case BREAK:
-                childNode = parseBreakStmt();
-                break;
-            case L_BRACE:
-                childNode = parseStmtBlock();
-                break;
-            case INT:
-            case DOUBLE:
-            case BOOL:
-                childNode = parseVarDecl();
-                break;
-            case IDENT:
-                childNode = parseAssignStmt();
-                break;
-            case END_OF_DOC:
+            TreeNode stmtNode = new TreeNode(NodeType.STMT, "stmt", null, getCurrToken().getLineNum(), getCurrToken().getPosition());
+            List<TreeNode> stmtNodeChildren = stmtNode.getChildren();
+            TreeNode childNode;
+            switch (getNextTokenType()) {
+                case IF:
+                    childNode = parseIfStmt();
+                    break;
+                case WHILE:
+                    childNode = parseWhileStmt();
+                    break;
+                case FOR:
+                    childNode = parseForStmt();
+                    break;
+                case READ:
+                    childNode = parseReadStmt();
+                    break;
+                case WRITE:
+                    childNode = parseWriteStmt();
+                    break;
+                case BREAK:
+                    childNode = parseBreakStmt();
+                    break;
+                case L_BRACE:
+                    childNode = parseStmtBlock();
+                    break;
+                case INT:
+                case DOUBLE:
+                case BOOL:
+                    childNode = parseVarDecl();
+                    break;
+                case IDENT:
+                    String value = getNextTokenValue();
+                    consumeNextToken(TokenType.IDENT);
+                    if (getNextTokenType().equals(TokenType.L_PAREN)) {
+                        childNode = parseCallStmt(value);
+                    } else {
+                        childNode = parseAssignStmt(value);
+                    }
+                    break;
+                case FUNCTION:
+                    childNode = parseFuncStmt();
+                    break;
+                case END_OF_DOC:
 
-            default:
-                throw new ParserException("");
-        }
-        childNode.setParent(stmtNode);
-        stmtNodeChildren.add(childNode);
-        return stmtNode;
+                default:
+                    throw new ParserException("");
+            }
+
+            childNode.setParent(stmtNode);
+            stmtNodeChildren.add(childNode);
+            return stmtNode;
+
     }
 
     //ForStmt-> for ( Decl|Assign;LogExpr;var++|var--)Stmt
     private TreeNode parseForStmt() throws ParserException{
-        TreeNode forStmtNode = new TreeNode(NodeType.FOR_STMT,"for_stmt",null);
+        TreeNode forStmtNode = new TreeNode(NodeType.FOR_STMT,"for_stmt",null,getCurrToken().getLineNum(), getCurrToken().getPosition());
         List<TreeNode> children = forStmtNode.getChildren();
         consumeNextToken(TokenType.FOR);
         consumeNextToken(TokenType.L_PAREN);
-        children.add(new TreeNode(NodeType.FOR,"for",forStmtNode));
-        children.add(new TreeNode(NodeType.L_PAREN,"(",forStmtNode));
+        children.add(new TreeNode(NodeType.FOR,"for",forStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
+        children.add(new TreeNode(NodeType.L_PAREN,"(",forStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         if(getNextTokenType()==TokenType.IDENT){
-            TreeNode expr=parseAssignStmt();  //for(assignStmt
+        	String v = getNextTokenValue();
+            consumeNextToken(TokenType.IDENT);
+            TreeNode expr=parseAssignStmt(v);  //for(assignStmt
             expr.setParent(forStmtNode);
             children.add(expr);}
         else if((getNextTokenType()==TokenType.INT)||(getNextTokenType()==TokenType.DOUBLE)){
@@ -181,7 +209,7 @@ public class Parser{
         exprlog.setParent(forStmtNode);
         children.add(exprlog);
         consumeNextToken(TokenType.SEMICOLON);
-        children.add(new TreeNode(NodeType.SEMICOLON,";",forStmtNode));
+        children.add(new TreeNode(NodeType.SEMICOLON,";",forStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         if(getNextTokenType()==TokenType.IDENT) {
             TokenType tokenType = this.tokenListIterator.next().getTokenType();
             TokenType tokenType1 = this.tokenListIterator.next().getTokenType();
@@ -197,7 +225,7 @@ public class Parser{
                 children.add(value);}*/
         }
         consumeNextToken(TokenType.R_PAREN);
-        children.add(new TreeNode(NodeType.R_PAREN,")",forStmtNode));
+        children.add(new TreeNode(NodeType.R_PAREN,")",forStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         TreeNode stmt = parseStmt();
         stmt.setParent(forStmtNode);
         children.add(stmt);
@@ -207,13 +235,15 @@ public class Parser{
     }
 
     private TreeNode parseAddStmt()throws ParserException{
-        TreeNode addStmtNode = new TreeNode(NodeType.ADD_STMT,"add_stmt",null);
+        TreeNode addStmtNode = new TreeNode(NodeType.ADD_STMT,"add_stmt",null,getCurrToken().getLineNum(), getCurrToken().getPosition());
         List<TreeNode> children = addStmtNode.getChildren();
-        TreeNode value = parseValue();    // i
+        String v = getNextTokenValue();
+        consumeNextToken(TokenType.IDENT);
+        TreeNode value = parseValue(v);    // i
         value.setParent(addStmtNode);
         children.add(value);
         consumeNextToken(TokenType.ASSIGN);
-        children.add(new TreeNode(NodeType.ASSIGN,"=",addStmtNode));
+        children.add(new TreeNode(NodeType.ASSIGN,"=",addStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         TreeNode expr = parseAriExpr();
         expr.setParent(addStmtNode);
         children.add(expr);
@@ -239,23 +269,23 @@ public class Parser{
      * @throws ParserException
      */
     private TreeNode parseIfStmt()throws ParserException{
-        TreeNode ifStmtNode = new TreeNode(NodeType.IF_STMT,"if_stmt",null);
+        TreeNode ifStmtNode = new TreeNode(NodeType.IF_STMT,"if_stmt",null,getCurrToken().getLineNum(), getCurrToken().getPosition());
         List<TreeNode> ifStmtNodeChildren = ifStmtNode.getChildren();
         consumeNextToken(TokenType.IF);
         consumeNextToken(TokenType.L_PAREN);
-        ifStmtNodeChildren.add(new TreeNode(NodeType.IF,"if",ifStmtNode));
-        ifStmtNodeChildren.add(new TreeNode(NodeType.L_PAREN,"(",ifStmtNode));
+        ifStmtNodeChildren.add(new TreeNode(NodeType.IF,"if",ifStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
+        ifStmtNodeChildren.add(new TreeNode(NodeType.L_PAREN,"(",ifStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         TreeNode expr = parseLogExpr();
         expr.setParent(ifStmtNode);
         ifStmtNodeChildren.add(expr);
         consumeNextToken(TokenType.R_PAREN);
-        ifStmtNodeChildren.add(new TreeNode(NodeType.R_PAREN,")",ifStmtNode));
+        ifStmtNodeChildren.add(new TreeNode(NodeType.R_PAREN,")",ifStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         TreeNode stmt = parseStmt();
         stmt.setParent(ifStmtNode);
         ifStmtNodeChildren.add(stmt);
         if(getNextTokenType()== TokenType.ELSE){
             consumeNextToken(TokenType.ELSE);
-            ifStmtNodeChildren.add(new TreeNode(NodeType.ELSE,"else",ifStmtNode));
+            ifStmtNodeChildren.add(new TreeNode(NodeType.ELSE,"else",ifStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
             TreeNode stmtt = parseStmt();
             stmtt.setParent(ifStmtNode);
             ifStmtNodeChildren.add(stmtt);
@@ -270,17 +300,17 @@ public class Parser{
      * @throws ParserException
      */
     private TreeNode parseWhileStmt()throws ParserException{
-        TreeNode whileStmtNode = new TreeNode(NodeType.WHILE_STMT,"while_stmt",null);
+        TreeNode whileStmtNode = new TreeNode(NodeType.WHILE_STMT,"while_stmt",null,getCurrToken().getLineNum(), getCurrToken().getPosition());
         List<TreeNode> whileStmtNodeChildren = whileStmtNode.getChildren();
         consumeNextToken(TokenType.WHILE);
-        whileStmtNodeChildren.add(new TreeNode(NodeType.WHILE,"while",whileStmtNode));
+        whileStmtNodeChildren.add(new TreeNode(NodeType.WHILE,"while",whileStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         consumeNextToken(TokenType.L_PAREN);
-        whileStmtNodeChildren.add(new TreeNode(NodeType.L_PAREN,"(",whileStmtNode));
+        whileStmtNodeChildren.add(new TreeNode(NodeType.L_PAREN,"(",whileStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         TreeNode expr = parseLogExpr();
         expr.setParent(whileStmtNode);
         whileStmtNodeChildren.add(expr);
         consumeNextToken(TokenType.R_PAREN);
-        whileStmtNodeChildren.add(new TreeNode(NodeType.R_PAREN,")",whileStmtNode));
+        whileStmtNodeChildren.add(new TreeNode(NodeType.R_PAREN,")",whileStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         TreeNode stmt = parseStmt();
         stmt.setParent(whileStmtNode);
         whileStmtNodeChildren.add(stmt);
@@ -293,20 +323,50 @@ public class Parser{
      * @return
      * @throws ParserException
      */
-    private TreeNode parseAssignStmt()throws ParserException{
-        TreeNode assignNode = new TreeNode(NodeType.ASSIGN_STMT,"assignStmt",null);
+    private TreeNode parseAssignStmt(String v)throws ParserException{
+        TreeNode assignNode = new TreeNode(NodeType.ASSIGN_STMT,"assignStmt",null,getCurrToken().getLineNum(), getCurrToken().getPosition());
         List<TreeNode> assignNodeChildren = assignNode.getChildren();
-        TreeNode value = parseValue();
+        TreeNode value = parseValue(v);
         value.setParent(assignNode);
         assignNodeChildren.add(value);
         consumeNextToken(TokenType.ASSIGN);
-        assignNodeChildren.add(new TreeNode(NodeType.ASSIGN,"=",assignNode));
+        assignNodeChildren.add(new TreeNode(NodeType.ASSIGN,"=",assignNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         TreeNode expr = parseAriExpr();
         expr.setParent(assignNode);
         assignNodeChildren.add(expr);
         consumeNextToken(TokenType.SEMICOLON);
-        assignNodeChildren.add(new TreeNode(NodeType.SEMICOLON,";",assignNode));
+        assignNodeChildren.add(new TreeNode(NodeType.SEMICOLON,";",assignNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         return assignNode;
+    }
+    
+    /**
+     * 解析函数调用语句
+     * CallStmt --> ident ( ) ;
+     * @return
+     * @throws ParserException
+     */
+    private TreeNode parseCallStmt(String v) throws ParserException{
+    	TreeNode callNode=new TreeNode(NodeType.CALL_STMT, "callStmt", null,getCurrToken().getLineNum(), getCurrToken().getPosition());
+    	List<TreeNode> callNodeChildren = callNode.getChildren();
+    	
+    	callNodeChildren.add(new TreeNode(NodeType.IDENT,v,callNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
+    	if(getNextTokenType()==TokenType.L_PAREN){
+            consumeNextToken(TokenType.L_PAREN);
+            callNodeChildren.add(new TreeNode(NodeType.L_PAREN,"(",callNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
+            while(getNextTokenType()!=TokenType.R_PAREN){
+                TreeNode varList = parseAriExpr();
+                varList.setParent(callNode);
+                callNodeChildren.add(varList);
+                if(getNextTokenType()!=TokenType.R_PAREN){
+                consumeNextToken(TokenType.COMMA);
+                callNodeChildren.add(new TreeNode(NodeType.COMMA,",",callNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));}
+            }
+            consumeNextToken(TokenType.R_PAREN);
+            callNodeChildren.add(new TreeNode(NodeType.R_PAREN,")",callNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
+            consumeNextToken(TokenType.SEMICOLON);
+            callNodeChildren.add(new TreeNode(NodeType.SEMICOLON,";",callNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
+        }
+        return callNode;
     }
     /**
      * 解析break语句
@@ -315,12 +375,12 @@ public class Parser{
      * @throws ParserException
      */
     private TreeNode parseBreakStmt()throws ParserException{
-        TreeNode breakStmtNode = new TreeNode(NodeType.BREAK_STMT,"break_stmt",null);
+        TreeNode breakStmtNode = new TreeNode(NodeType.BREAK_STMT,"break_stmt",null,getCurrToken().getLineNum(), getCurrToken().getPosition());
         List<TreeNode> breakStmtNodeChildren = breakStmtNode.getChildren();
         consumeNextToken(TokenType.BREAK);
         consumeNextToken(TokenType.SEMICOLON);
-        breakStmtNodeChildren.add(new TreeNode(NodeType.BREAK,"break",breakStmtNode));
-        breakStmtNodeChildren.add(new TreeNode(NodeType.SEMICOLON,";",breakStmtNode));
+        breakStmtNodeChildren.add(new TreeNode(NodeType.BREAK,"break",breakStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
+        breakStmtNodeChildren.add(new TreeNode(NodeType.SEMICOLON,";",breakStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         return breakStmtNode;
     }
 
@@ -331,19 +391,21 @@ public class Parser{
      * @throws ParserException
      */
     private TreeNode parseReadStmt()throws ParserException{
-        TreeNode readStmtNode = new TreeNode(NodeType.READ_STMT,"read_stmt",null);
+        TreeNode readStmtNode = new TreeNode(NodeType.READ_STMT,"read_stmt",null,getCurrToken().getLineNum(), getCurrToken().getPosition());
         List<TreeNode> readStmtNodeChildren = readStmtNode.getChildren();
         consumeNextToken(TokenType.READ);
-        readStmtNodeChildren.add(new TreeNode(NodeType.READ,"read",readStmtNode));
+        readStmtNodeChildren.add(new TreeNode(NodeType.READ,"read",readStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         consumeNextToken(TokenType.L_PAREN);
-        readStmtNodeChildren.add(new TreeNode(NodeType.L_PAREN,"(",readStmtNode));
-        TreeNode value = parseValue();
+        readStmtNodeChildren.add(new TreeNode(NodeType.L_PAREN,"(",readStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
+        String v = getNextTokenValue();
+        consumeNextToken(TokenType.IDENT);
+        TreeNode value = parseValue(v);
         value.setParent(readStmtNode);
         readStmtNodeChildren.add(value);
         consumeNextToken(TokenType.R_PAREN);
-        readStmtNodeChildren.add(new TreeNode(NodeType.R_PAREN,")",readStmtNode));
+        readStmtNodeChildren.add(new TreeNode(NodeType.R_PAREN,")",readStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         consumeNextToken(TokenType.SEMICOLON);
-        readStmtNodeChildren.add(new TreeNode(NodeType.SEMICOLON,";",readStmtNode));
+        readStmtNodeChildren.add(new TreeNode(NodeType.SEMICOLON,";",readStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         return readStmtNode;
     }
 
@@ -354,19 +416,19 @@ public class Parser{
      * @throws ParserException
      */
     private TreeNode parseWriteStmt()throws ParserException{
-        TreeNode writeStmtNode = new TreeNode(NodeType.WRITE_STMT,"write_stmt",null);
+        TreeNode writeStmtNode = new TreeNode(NodeType.WRITE_STMT,"write_stmt",null,getCurrToken().getLineNum(), getCurrToken().getPosition());
         List<TreeNode> writeStmtNodeChildren = writeStmtNode.getChildren();
         consumeNextToken(TokenType.WRITE);
-        writeStmtNodeChildren.add(new TreeNode(NodeType.WRITE,"write",writeStmtNode));
+        writeStmtNodeChildren.add(new TreeNode(NodeType.WRITE,"write",writeStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         consumeNextToken(TokenType.L_PAREN);
-        writeStmtNodeChildren.add(new TreeNode(NodeType.L_PAREN,"(",writeStmtNode));
+        writeStmtNodeChildren.add(new TreeNode(NodeType.L_PAREN,"(",writeStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         TreeNode expr = parseAriExpr();
         expr.setParent(writeStmtNode);
         writeStmtNodeChildren.add(expr);
         consumeNextToken(TokenType.R_PAREN);
-        writeStmtNodeChildren.add(new TreeNode(NodeType.R_PAREN,")",writeStmtNode));
+        writeStmtNodeChildren.add(new TreeNode(NodeType.R_PAREN,")",writeStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         consumeNextToken(TokenType.SEMICOLON);
-        writeStmtNodeChildren.add(new TreeNode(NodeType.SEMICOLON,";",writeStmtNode));
+        writeStmtNodeChildren.add(new TreeNode(NodeType.SEMICOLON,";",writeStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         return writeStmtNode;
     }
 
@@ -376,40 +438,88 @@ public class Parser{
      * @throws ParserException
      */
     private TreeNode parseStmtBlock() throws ParserException{
-        TreeNode stmtBlockNode = new TreeNode(NodeType.STMT_BLOCK,"stmt_block",null);
+        TreeNode stmtBlockNode = new TreeNode(NodeType.STMT_BLOCK,"stmt_block",null,getCurrToken().getLineNum(), getCurrToken().getPosition());
         List<TreeNode> stmtBlokNodeChildren = stmtBlockNode.getChildren();
         consumeNextToken(TokenType.L_BRACE);
-        stmtBlokNodeChildren.add(new TreeNode(NodeType.L_BRACE,"{",stmtBlockNode));
+        stmtBlokNodeChildren.add(new TreeNode(NodeType.L_BRACE,"{",stmtBlockNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         while(getNextTokenType()!= TokenType.R_BRACE){
             TreeNode block = parseStmt();
             block.setParent(stmtBlockNode);
             stmtBlokNodeChildren.add(block);
         }
         consumeNextToken(TokenType.R_BRACE);
-        stmtBlokNodeChildren.add(new TreeNode(NodeType.R_BRACE,"}",stmtBlockNode));
+        stmtBlokNodeChildren.add(new TreeNode(NodeType.R_BRACE,"}",stmtBlockNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         return stmtBlockNode;
     }
 
+    /**
+     * 解析函数
+     * @return TreeNode
+     * @throws ParserException
+     */
+    private TreeNode parseFuncStmt() throws ParserException{
+    	TreeNode funcStmtNode = new TreeNode(NodeType.FUNCTION_STMT,"func_stmt",null,getCurrToken().getLineNum(), getCurrToken().getPosition());
+        List<TreeNode> funcStmtNodeChildren = funcStmtNode.getChildren();
+        consumeNextToken(TokenType.FUNCTION);
+        funcStmtNodeChildren.add(new TreeNode(NodeType.FUNCTION,"function",funcStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
+        
+        String v = getNextTokenValue();
+        consumeNextToken(TokenType.IDENT);
+        TreeNode funcHead=new TreeNode(NodeType.IDENT,v,funcStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition());
+        funcStmtNodeChildren.add(funcHead);
+        consumeNextToken(TokenType.L_PAREN);
+        funcStmtNodeChildren.add(new TreeNode(NodeType.L_PAREN,"(",funcStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
+        TreeNode funVarNode=new TreeNode(NodeType.FUN_VARLIST,"func_varList",funcStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition());
+        List<TreeNode> funcVarNodeChildren = funVarNode.getChildren();
+        while(getNextTokenType()==TokenType.INT||getNextTokenType()==TokenType.DOUBLE
+                ||getNextTokenType()==TokenType.BOOL){
+            TreeNode type = parseType();
+            type.setParent(funVarNode);
+            funcVarNodeChildren.add(type);
+            String value=getNextTokenValue();
+            consumeNextToken(TokenType.IDENT);
+            funcVarNodeChildren.add(new TreeNode(NodeType.IDENT,value,funcStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
+            if(getNextTokenType()==TokenType.R_PAREN){}
+            else{
+                consumeNextToken(TokenType.COMMA);
+                funcVarNodeChildren.add(new TreeNode(NodeType.COMMA,",",funcStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
+            }
+        }
+        funVarNode.setParent(funcStmtNode);
+        funcStmtNodeChildren.add(funVarNode);
+
+        consumeNextToken(TokenType.R_PAREN);
+        funcStmtNodeChildren.add(new TreeNode(NodeType.R_PAREN,")",funcStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
+        if(getNextTokenType()==TokenType.L_BRACE){
+        TreeNode funcBody = parseStmtBlock();
+        funcBody.setParent(funcStmtNode);
+        funcStmtNodeChildren.add(funcBody);}
+        else if(getNextTokenType()==TokenType.SEMICOLON){
+            consumeNextToken(TokenType.SEMICOLON);
+            funcStmtNodeChildren.add(new TreeNode(NodeType.SEMICOLON,";",funcStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
+        }
+        
+        return funcStmtNode;
+    }
     /**
      * 解析value语句
      * Value --> ident [intconstant] | ident
      * @return
      * @throws ParserException
      */
-    private TreeNode parseValue() throws ParserException{
-        TreeNode valueNode = new TreeNode(NodeType.VALUE,"value",null);
+    private TreeNode parseValue(String value) throws ParserException{
+        TreeNode valueNode = new TreeNode(NodeType.VALUE,"value",null,getCurrToken().getLineNum(), getCurrToken().getPosition());
         List<TreeNode> valueNodeChildren = valueNode.getChildren();
-        String value = getNextTokenValue();
-        consumeNextToken(TokenType.IDENT);
-        valueNodeChildren.add(new TreeNode(NodeType.IDENT,value,valueNode));
+        
+        valueNodeChildren.add(new TreeNode(NodeType.IDENT,value,valueNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         if(getNextTokenType()==TokenType.L_BRACKET){
             consumeNextToken(TokenType.L_BRACKET);
-            valueNodeChildren.add(new TreeNode(NodeType.L_BRACKET,"[",valueNode));
+            valueNodeChildren.add(new TreeNode(NodeType.L_BRACKET,"[",valueNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
             TreeNode ariExpr = parseAriExpr();
             ariExpr.setParent(valueNode);
             valueNodeChildren.add(ariExpr);
             consumeNextToken(TokenType.R_BRACKET);
-            valueNodeChildren.add(new TreeNode(NodeType.R_BRACKET,"]",valueNode));
+            valueNodeChildren.add(new TreeNode(NodeType.R_BRACKET,"]",valueNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         }
         return valueNode;
     }
@@ -445,7 +555,7 @@ public class Parser{
      * @throws ParserException
      */
     private TreeNode parseAriExpr() throws ParserException {
-        TreeNode ariExprNode = new TreeNode(NodeType.ARI_EXPR, "E", null);
+        TreeNode ariExprNode = new TreeNode(NodeType.ARI_EXPR, "E", null,getCurrToken().getLineNum(), getCurrToken().getPosition());
         List<TreeNode> ariExprNodeChildren = ariExprNode.getChildren();
 //        if(getNextTokenType()==TokenType.MINUS) {
 //            consumeNextToken(TokenType.MINUS);
@@ -470,10 +580,10 @@ public class Parser{
         while(getNextTokenType()==TokenType.MINUS||getNextTokenType()==TokenType.PLUS){
             if(getNextTokenType()==TokenType.MINUS){
                 consumeNextToken(TokenType.MINUS);
-                ariExprNodeChildren.add(new TreeNode(NodeType.MINUS,"-",ariExprNode));
+                ariExprNodeChildren.add(new TreeNode(NodeType.MINUS,"-",ariExprNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
             }else{
                 consumeNextToken(TokenType.PLUS);
-                ariExprNodeChildren.add(new TreeNode(NodeType.PLUS,"+",ariExprNode));
+                ariExprNodeChildren.add(new TreeNode(NodeType.PLUS,"+",ariExprNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
             }
             TreeNode term1 = parseTerm();
             term1.setParent(ariExprNode);
@@ -508,7 +618,7 @@ public class Parser{
 //    }
 
     private TreeNode parseTerm() throws ParserException{
-        TreeNode termNode = new TreeNode(NodeType.TERM,"T",null);
+        TreeNode termNode = new TreeNode(NodeType.TERM,"T",null,getCurrToken().getLineNum(), getCurrToken().getPosition());
         List<TreeNode> termNodeChildren = termNode.getChildren();
         TreeNode factor = parseFactor();
         factor.setParent(termNode);
@@ -516,13 +626,13 @@ public class Parser{
         while(getNextTokenType()==TokenType.MOD||getNextTokenType()==TokenType.DIV||getNextTokenType()==TokenType.MULTI){
             if(getNextTokenType()==TokenType.MOD){
                 consumeNextToken(TokenType.MOD);
-                termNodeChildren.add(new TreeNode(NodeType.MOD,"%",termNode));
+                termNodeChildren.add(new TreeNode(NodeType.MOD,"%",termNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
             }else if(getNextTokenType()==TokenType.DIV){
                 consumeNextToken(TokenType.DIV);
-                termNodeChildren.add(new TreeNode(NodeType.DIV,"/",termNode));
+                termNodeChildren.add(new TreeNode(NodeType.DIV,"/",termNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
             }else{
                 consumeNextToken(TokenType.MULTI);
-                termNodeChildren.add(new TreeNode(NodeType.MULTI,"*",termNode));
+                termNodeChildren.add(new TreeNode(NodeType.MULTI,"*",termNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
             }
             TreeNode factor1 = parseFactor();
             factor1.setParent(termNode);
@@ -570,20 +680,22 @@ public class Parser{
 //    }
 
     private TreeNode parseFactor()throws ParserException{
-        TreeNode factorNode = new TreeNode(NodeType.FACTOR,"F",null);
+        TreeNode factorNode = new TreeNode(NodeType.FACTOR,"F",null,getCurrToken().getLineNum(), getCurrToken().getPosition());
         List<TreeNode> facNodeChildren = factorNode.getChildren();
         switch (getNextTokenType()){
             case TRUE:
                 consumeNextToken(TokenType.TRUE);
-                facNodeChildren.add(new TreeNode(NodeType.TRUE,"true",factorNode));
+                facNodeChildren.add(new TreeNode(NodeType.TRUE,"true",factorNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
                 break;
             case FALSE:
                 consumeNextToken(TokenType.FALSE);
-                facNodeChildren.add(new TreeNode(NodeType.FALSE,"false",factorNode));
+                facNodeChildren.add(new TreeNode(NodeType.FALSE,"false",factorNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
                 break;
 
             case IDENT:
-                TreeNode value = parseValue();
+            	String v = getNextTokenValue();
+                consumeNextToken(TokenType.IDENT);
+                TreeNode value = parseValue(v);
                 value.setParent(factorNode);
                 facNodeChildren.add(value);
                 break;
@@ -591,25 +703,25 @@ public class Parser{
             case INT_NUM:
                 String intvalue = getNextTokenValue();
                 consumeNextToken(TokenType.INT_NUM);
-                facNodeChildren.add(new TreeNode(NodeType.INT_NUM,intvalue,factorNode));
+                facNodeChildren.add(new TreeNode(NodeType.INT_NUM,intvalue,factorNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
                 break;
             case DOUBLE_NUM:
                 String douvalue = getNextTokenValue();
                 consumeNextToken(TokenType.DOUBLE_NUM);
-                facNodeChildren.add(new TreeNode(NodeType.DOUBLE_NUM,douvalue,factorNode));
+                facNodeChildren.add(new TreeNode(NodeType.DOUBLE_NUM,douvalue,factorNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
                 break;
             case L_PAREN:
                 consumeNextToken(TokenType.L_PAREN);
-                facNodeChildren.add(new TreeNode(NodeType.L_PAREN,"(",factorNode));
+                facNodeChildren.add(new TreeNode(NodeType.L_PAREN,"(",factorNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
                 TreeNode ariExpr = parseAriExpr();
                 ariExpr.setParent(factorNode);
                 facNodeChildren.add(ariExpr);
                 consumeNextToken(TokenType.R_PAREN);
-                facNodeChildren.add(new TreeNode(NodeType.R_PAREN,")",factorNode));
+                facNodeChildren.add(new TreeNode(NodeType.R_PAREN,")",factorNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
                 break;
             case MINUS:
                 consumeNextToken(TokenType.MINUS);
-                facNodeChildren.add(new TreeNode(NodeType.MINUS,"-",factorNode));
+                facNodeChildren.add(new TreeNode(NodeType.MINUS,"-",factorNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
                 TreeNode factor = parseFactor();
                 factor.setParent(factorNode);
                 facNodeChildren.add(factor);
@@ -624,14 +736,14 @@ public class Parser{
      * @throws ParserException
      */
     private TreeNode parseLogExpr()throws ParserException{
-        TreeNode logExprNode = new TreeNode(NodeType.LOG_EXPR,"logicalExpr",null);
+        TreeNode logExprNode = new TreeNode(NodeType.LOG_EXPR,"logicalExpr",null,getCurrToken().getLineNum(), getCurrToken().getPosition());
         List<TreeNode> logExprChildren = logExprNode.getChildren();
         if(getNextTokenType()==TokenType.TRUE){
             consumeNextToken(TokenType.TRUE);
-            logExprChildren.add(new TreeNode(NodeType.TRUE,"true",logExprNode));
+            logExprChildren.add(new TreeNode(NodeType.TRUE,"true",logExprNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         }else if(getNextTokenType()==TokenType.FALSE){
             consumeNextToken(TokenType.FALSE);
-            logExprChildren.add(new TreeNode(NodeType.FALSE,"false",logExprNode));
+            logExprChildren.add(new TreeNode(NodeType.FALSE,"false",logExprNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         }else{
             TreeNode ariExpr1 = parseAriExpr();
             ariExpr1.setParent(logExprNode);
@@ -658,26 +770,26 @@ public class Parser{
      * @throws ParserException
      */
     private TreeNode parseLogOp() throws ParserException{
-        TreeNode logOpNode = new TreeNode(NodeType.LOG_OP,"logicalOp",null);
+        TreeNode logOpNode = new TreeNode(NodeType.LOG_OP,"logicalOp",null,getCurrToken().getLineNum(), getCurrToken().getPosition());
         List<TreeNode> logOpChildren = logOpNode.getChildren();
         if(getNextTokenType()==TokenType.GREATER){
             consumeNextToken(TokenType.GREATER);
-            logOpChildren.add(new TreeNode(NodeType.GREATER,">",logOpNode));
+            logOpChildren.add(new TreeNode(NodeType.GREATER,">",logOpNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         }else if(getNextTokenType()== TokenType.LESS){
             consumeNextToken(TokenType.LESS);
-            logOpChildren.add(new TreeNode(NodeType.LESS,"<",logOpNode));
+            logOpChildren.add(new TreeNode(NodeType.LESS,"<",logOpNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         }else if(getNextTokenType()== TokenType.LE_EQ){
             consumeNextToken(TokenType.LE_EQ);
-            logOpChildren.add(new TreeNode(NodeType.LE_EQ,"<=",logOpNode));
+            logOpChildren.add(new TreeNode(NodeType.LE_EQ,"<=",logOpNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         }else if(getNextTokenType()== TokenType.EQUAL){
             consumeNextToken(TokenType.EQUAL);
-            logOpChildren.add(new TreeNode(NodeType.EQUAL,"==",logOpNode));
+            logOpChildren.add(new TreeNode(NodeType.EQUAL,"==",logOpNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         }else if(getNextTokenType()== TokenType.GR_EQ){
             consumeNextToken(TokenType.GR_EQ);
-            logOpChildren.add(new TreeNode(NodeType.GR_EQ,">=",logOpNode));
+            logOpChildren.add(new TreeNode(NodeType.GR_EQ,">=",logOpNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         }else if(getNextTokenType()== TokenType.NOT_EQUAL){
             consumeNextToken(TokenType.NOT_EQUAL);
-            logOpChildren.add(new TreeNode(NodeType.NOT_EQUAL,"!=",logOpNode));
+            logOpChildren.add(new TreeNode(NodeType.NOT_EQUAL,"!=",logOpNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         }else{
             Token token = getTokenListIterator().next();
             throw new ParserException("Line:"+token.getLineNum()+
@@ -692,27 +804,27 @@ public class Parser{
      * @throws ParserException
      */
     private TreeNode parseVarList() throws ParserException{
-        TreeNode varListNode = new TreeNode(NodeType.VARLIST,"varList",null);
+        TreeNode varListNode = new TreeNode(NodeType.VARLIST,"varList",null,getCurrToken().getLineNum(), getCurrToken().getPosition());
         List<TreeNode> varListNodeChildren = varListNode.getChildren();
         String value = getNextTokenValue();
         consumeNextToken(TokenType.IDENT);
-        varListNodeChildren.add(new TreeNode(NodeType.IDENT,value,varListNode));
+        varListNodeChildren.add(new TreeNode(NodeType.IDENT,value,varListNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         if(getNextTokenType()== TokenType.ASSIGN){
             consumeNextToken(TokenType.ASSIGN);
-            varListNodeChildren.add(new TreeNode(NodeType.ASSIGN,"=",varListNode));
+            varListNodeChildren.add(new TreeNode(NodeType.ASSIGN,"=",varListNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
             TreeNode ariExpr = parseAriExpr();
             ariExpr.setParent(varListNode);
             varListNodeChildren.add(ariExpr);
         }
         while(getNextTokenType()==TokenType.COMMA){
             consumeNextToken(TokenType.COMMA);
-            varListNodeChildren.add(new TreeNode(NodeType.COMMA,",",varListNode));
+            varListNodeChildren.add(new TreeNode(NodeType.COMMA,",",varListNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
             String nextValue = getNextTokenValue();
             consumeNextToken(TokenType.IDENT);
-            varListNodeChildren.add(new TreeNode(NodeType.IDENT,nextValue,varListNode));
+            varListNodeChildren.add(new TreeNode(NodeType.IDENT,nextValue,varListNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
             if(getNextTokenType()== TokenType.ASSIGN){
                 consumeNextToken(TokenType.ASSIGN);
-                varListNodeChildren.add(new TreeNode(NodeType.ASSIGN,"=",varListNode));
+                varListNodeChildren.add(new TreeNode(NodeType.ASSIGN,"=",varListNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
                 TreeNode ariExpr = parseAriExpr();
                 ariExpr.setParent(varListNode);
                 varListNodeChildren.add(ariExpr);
@@ -730,17 +842,17 @@ public class Parser{
      * @throws ParserException
      */
     private TreeNode parseType() throws ParserException{
-        TreeNode typeNode = new TreeNode(NodeType.TYPE,"type",null);
+        TreeNode typeNode = new TreeNode(NodeType.TYPE,"type",null,getCurrToken().getLineNum(), getCurrToken().getPosition());
         List<TreeNode> typeNodeChildren = typeNode.getChildren();
         if(getNextTokenType()==TokenType.INT){
             consumeNextToken(TokenType.INT);
-            typeNodeChildren.add(new TreeNode(NodeType.INT,"int",typeNode));
+            typeNodeChildren.add(new TreeNode(NodeType.INT,"int",typeNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         }else if(getNextTokenType()==TokenType.DOUBLE){
             consumeNextToken(TokenType.DOUBLE);
-            typeNodeChildren.add(new TreeNode(NodeType.DOUBLE,"double",typeNode));
+            typeNodeChildren.add(new TreeNode(NodeType.DOUBLE,"double",typeNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         }else if(getNextTokenType()==TokenType.BOOL) {
             consumeNextToken(TokenType.BOOL);
-            typeNodeChildren.add(new TreeNode(NodeType.BOOL, "bool", typeNode));
+            typeNodeChildren.add(new TreeNode(NodeType.BOOL, "bool", typeNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         }
         TreeNode array = parseArrayType();
         array.setParent(typeNode);
@@ -749,18 +861,18 @@ public class Parser{
     }
 
     private TreeNode parseArrayType()throws ParserException{
-        TreeNode arrNode = new TreeNode(NodeType.ARRAY_TYPE,"arrayNum",null);
+        TreeNode arrNode = new TreeNode(NodeType.ARRAY_TYPE,"arrayNum",null,getCurrToken().getLineNum(), getCurrToken().getPosition());
         List<TreeNode> arrChildren = arrNode.getChildren();
         if(getNextTokenType()==TokenType.L_BRACKET){
             consumeNextToken(TokenType.L_BRACKET);
-            arrChildren.add(new TreeNode(NodeType.L_BRACKET,"[",arrNode));
+            arrChildren.add(new TreeNode(NodeType.L_BRACKET,"[",arrNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
             TreeNode ariExpr = parseAriExpr();
             ariExpr.setParent(arrNode);
             arrChildren.add(ariExpr);
             consumeNextToken(TokenType.R_BRACKET);
-            arrChildren.add(new TreeNode(NodeType.R_BRACKET,"]",arrNode));
+            arrChildren.add(new TreeNode(NodeType.R_BRACKET,"]",arrNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         }else{
-            arrChildren.add(new TreeNode(NodeType.NULL,"null",arrNode));
+            arrChildren.add(new TreeNode(NodeType.NULL,"null",arrNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         }
         return arrNode;
     }
@@ -772,7 +884,7 @@ public class Parser{
      * @throws ParserException
      */
     private TreeNode parseVarDecl()throws ParserException{
-        TreeNode varDeclNode = new TreeNode(NodeType.VAR_DECL,"varDecl",null);
+        TreeNode varDeclNode = new TreeNode(NodeType.VAR_DECL,"varDecl",null,getCurrToken().getLineNum(), getCurrToken().getPosition());
         List<TreeNode> varDeclNodeChildren = varDeclNode.getChildren();
         TreeNode type = parseType();
         type.setParent(varDeclNode);
@@ -781,8 +893,22 @@ public class Parser{
         varlist.setParent(varDeclNode);
         varDeclNodeChildren.add(varlist);
         consumeNextToken(TokenType.SEMICOLON);
-        varDeclNodeChildren.add(new TreeNode(NodeType.SEMICOLON,";",varDeclNode));
+        varDeclNodeChildren.add(new TreeNode(NodeType.SEMICOLON,";",varDeclNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         return varDeclNode;
     }
 
+ /*
+    private TreeNode parseFuncList()throws ParserException{
+        TreeNode func_varNode = new TreeNode(NodeType.FUN_VARLIST,"Func_varList",null);
+        List<TreeNode> children = func_varNode.getChildren();
+        TreeNode type = parseType();
+        type.setParent(func_varNode);
+        children.add(type);
+        TreeNode varlist = parseVarList();
+        varlist.setParent(func_varNode);
+        children.add(varlist);
+        consumeNextToken(TokenType.SEMICOLON);
+        children.add(new TreeNode(NodeType.SEMICOLON,";",func_varNode));
+        return func_varNode;
+    }*/
 }

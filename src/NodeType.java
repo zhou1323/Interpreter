@@ -17,6 +17,9 @@ public enum NodeType {
     BREAK_STMT,   //break语句
     WRITE_STMT,   //write语句
     READ_STMT,   //read语句
+    FUNCTION_STMT,
+    FUN_VARLIST,
+    CALL_STMT,
     ASSIGN_STMT,   //赋值语句
     VALUE,   // value语句
     ARI_EXPR,   //  算术表达式
@@ -33,7 +36,7 @@ public enum NodeType {
     //特殊符号 { } [ ] ( ) ; ,
     L_BRACE, R_BRACE, L_BRACKET, R_BRACKET, L_PAREN, R_PAREN, SEMICOLON, COMMA,
     //保留字
-    IF, ELSE, FOR,WHILE, READ, WRITE, INT, DOUBLE, BREAK, TRUE, FALSE,BOOL,
+    IF, ELSE, FOR,WHILE, READ, WRITE, INT, DOUBLE, BREAK, TRUE, FALSE,BOOL,FUNCTION,
     //变量  数字
     IDENT, INT_NUM, DOUBLE_NUM,
     //错误字符

@@ -3,6 +3,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 
 import com.sun.corba.se.impl.orbutil.graph.Node;
@@ -10,15 +12,22 @@ import com.sun.org.apache.xalan.internal.xsltc.compiler.sym;
 
 import sun.reflect.generics.tree.Tree;
 
-public class Sematics {
+public class Sematics extends Thread{
+	private Parser parser;
 	private SymbolTable table;
 	private String errMsg;
+	private TreeNode root;
 	private int scale = 0;
 
-	public Sematics(Parser parser) throws Exception {
-		TreeNode root = parser.parseProgram();
+	public Sematics(String path) throws Exception {
+		this.parser = new Parser(path);
+		this.root = parser.parseProgram();
 		this.table = new SymbolTable();
-		travel(root);
+		//run();
+	}
+
+	public Parser getParser() {
+		return parser;
 	}
 
 	public SymbolTable getTable() {
@@ -39,11 +48,15 @@ public class Sematics {
 			return false;
 	}
 
-	public void travel(TreeNode treeNode) throws Exception {
-		if (!treeNode.getChildren().isEmpty()) {
-			for (TreeNode t : treeNode.getChildren()) {
-				stmt(t);
+	public void run(){
+		try {
+			if (!root.getChildren().isEmpty()) {
+				for (TreeNode t : root.getChildren()) {
+					stmt(t);
+				}
 			}
+		}catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
 
@@ -67,22 +80,25 @@ public class Sematics {
 			scale++;
 			while_stmt(temp);
 			scale--;
-		} /*
-			 * else if(t.getNodeType().equals(NodeType.STMT_BLOCK)){ for(TreeNode
-			 * child:t.getChildren()){ travel(child); } }
-			 */
-		else if (temp.getNodeType().equals(NodeType.READ_STMT)) {
+		} else if (temp.getNodeType().equals(NodeType.CALL_STMT)) {
+			call_stmt(temp);
+		} else if (temp.getNodeType().equals(NodeType.FUNCTION_STMT)) {
+			func_stmt(temp);
+		} else if (temp.getNodeType().equals(NodeType.READ_STMT)) {
 			read_stmt(temp);
-		}else if (temp.getNodeType().equals(NodeType.WRITE_STMT)) {
+		} else if (temp.getNodeType().equals(NodeType.WRITE_STMT)) {
 			write_stmt(temp);
-		}else if (temp.getNodeType().equals(NodeType.STMT_BLOCK)) {
+		} else if (temp.getNodeType().equals(NodeType.STMT_BLOCK)) {
 			block_stmt(temp);
 		} else if (temp.getNodeType().equals(NodeType.BREAK_STMT)) {
 			if (isInLoop > 0) {
 				break_stmt(temp);
 			} else {
-				errMsg = "break只能用在循环语句中";
-				System.out.println(errMsg);
+				/*
+				 * errMsg = "break只能用在循环语句中"; System.out.println(errMsg);
+				 */
+				throw new Exception("Line: " + temp.getLineNum() + ", Position: " + temp.getPosition()
+						+ ", The 'Break' can only been used in circular statement !");
 			}
 		}
 	}
@@ -120,9 +136,9 @@ public class Sematics {
 		}
 	}
 
-//	public boolean compare(TreeNode left,TreeNode right){
-//
-//	}
+	// public boolean compare(TreeNode left,TreeNode right){
+	//
+	// }
 
 	public boolean judgeCondition(TreeNode conditionNode) throws Exception {
 		if (conditionNode.getChildren().size() > 1) {
@@ -133,54 +149,164 @@ public class Sematics {
 			String leftValue = calAriExpr(leftNode).getValue();
 			String rightValue = calAriExpr(rightNode).getValue();
 			if (leftNode.getNodeType() == NodeType.INT_NUM) {
-				left = (double)Integer.parseInt(leftValue);
+				left = (double) Integer.parseInt(leftValue);
 				if (rightNode.getNodeType() == NodeType.INT_NUM) {
-					right = (double)Integer.parseInt(rightValue);
+					right = (double) Integer.parseInt(rightValue);
 				} else {
 					right = Double.parseDouble(rightValue);
 				}
 			} else {
 				left = Double.parseDouble(leftValue);
 				if (rightNode.getNodeType() == NodeType.INT_NUM) {
-					right = (double)Integer.parseInt(rightValue);
+					right = (double) Integer.parseInt(rightValue);
 				} else {
 					right = Double.parseDouble(rightValue);
 				}
 			}
 			switch (logicOp.getFirstChild().getNodeType()) {
-				case EQUAL:
-					return (left == right);
-				case NOT_EQUAL:
-					return (left != right);
-				case LE_EQ:
-					return (left <= right);
-				case GR_EQ:
-					return (left >= right);
-				case GREATER:
-					return (left > right);
-				case LESS:
-					return (left < right);
-				default:
-					break;
+			case EQUAL:
+				return (left == right);
+			case NOT_EQUAL:
+				return (left != right);
+			case LE_EQ:
+				return (left <= right);
+			case GR_EQ:
+				return (left >= right);
+			case GREATER:
+				return (left > right);
+			case LESS:
+				return (left < right);
+			default:
+				break;
 			}
 		} else {
 			TreeNode boolNode = calAriExpr(conditionNode.getFirstChild());
 			if (boolNode.getNodeType() == NodeType.BOOL) {
-				if(boolNode.getValue().equals("false"))
+				if (boolNode.getValue().equals("false"))
 					return false;
 				else if (boolNode.getValue().equals("true")) {
 					return true;
 				}
-			}
-			else if(boolNode.getNodeType()==NodeType.INT_NUM) {
-				return Integer.parseInt(boolNode.getValue())!=0;
-			}
-			else if(boolNode.getNodeType()==NodeType.DOUBLE_NUM) {
-				return Double.parseDouble(boolNode.getValue())!=0;
+			} else if (boolNode.getNodeType() == NodeType.INT_NUM) {
+				return Integer.parseInt(boolNode.getValue()) != 0;
+			} else if (boolNode.getNodeType() == NodeType.DOUBLE_NUM) {
+				return Double.parseDouble(boolNode.getValue()) != 0;
 			}
 
 		}
 		return false;
+	}
+
+	public void call_stmt(TreeNode t) throws Exception {
+		if (!t.getChildren().isEmpty()) {
+			TreeNode funName = t.getFirstChild(); // function name
+			String name = funName.getValue();
+			String fname = name + " ";
+			if (table.contains(name)) {
+				ArrayList<Symbol> symbol = new ArrayList<Symbol>();
+				Symbol ss = new Symbol();
+				List<Object> ls = new ArrayList<Object>();
+				ls.add(0);
+				ss.setValue(ls);
+				symbol.add(ss);
+				Collection<List<Symbol>> values = table.map.values();
+				Iterator<List<Symbol>> iter = values.iterator();
+				while (iter.hasNext()) {
+					List<Symbol> symbols = iter.next();
+					for (Symbol s : symbols) {
+						if (s.getFuncName().equals(fname)) {
+							symbol.add(s);
+						}
+					}
+				}
+				int i = 2;
+				for (i = 2; i < t.getChildren().size() - 2; i = i + 2) { // 参数只能是数字
+					TreeNode eNode = t.getChildren().get(i);
+					TreeNode tNode = eNode.getChildren().get(0);
+					TreeNode fNode = tNode.getChildren().get(0);
+					if (matchInt(fNode.getFirstChild().getValue()) && symbol.get(i / 2).getType().equals("int")
+							|| matchInt(fNode.getFirstChild().getValue())
+									&& symbol.get(i / 2).getType().equals("double")) {
+						List<Object> lint = new ArrayList<Object>();
+						lint.add(fNode.getFirstChild().getValue());
+						symbol.get(i / 2).setValue(lint);
+					}
+
+					else if (matchDouble(fNode.getFirstChild().getValue())
+							&& symbol.get(i / 2).getType().equals("double")) {
+						List<Object> ldou = new ArrayList<Object>();
+						ldou.add(fNode.getFirstChild().getValue());
+						symbol.get(i / 2).setValue(ldou);
+					} else {
+						// throw new Exception("The type of your input number can't match with the
+						// identity type of the function!");
+						throw new Exception("Line: " + fNode.getLineNum() + ", Position: " + fNode.getPosition()
+								+ ", The type of your input number can't match with the identity type of the function!");
+					}
+				}
+
+			} else {
+				// throw new Exception("The function has not been declared!");
+				throw new Exception("Line: " + funName.getLineNum() + ", Position: " + funName.getPosition()
+						+ ", The function has not been declared!");
+			}
+		} else {
+			// throw new Exception("The function has not been declared!");
+			throw new Exception("Line: " + t.getLineNum() + ", Position: " + t.getPosition()
+					+ ", The function has not been declared!");
+		}
+	}
+
+	public void func_stmt(TreeNode t) throws Exception {
+		if (!t.getChildren().isEmpty()) {
+			TreeNode funName = t.getNthChild(1);
+			Symbol func = new Symbol();
+			func.setName(funName.getValue());
+			func.setFuncName(funName.getValue());
+			table.put(func.getName(), func);
+			TreeNode varList = t.getNthChild(3);
+			TreeNode funStmt = t.getNthChild(5);
+			if (varList.getChildren().size() != 0) {
+				int index = 0;
+				while (index < varList.getChildren().size() - 1) { // put arguments of the function into table
+					Symbol symbol = new Symbol();
+					symbol.setType(varList.getNthChild(index).getFirstChild().getValue());
+					String fn = funName.getValue() + " ";
+					symbol.setFuncName(fn);
+					index = index + 1;
+					symbol.setName(varList.getNthChild(index).getValue());
+					List<Object> l = new ArrayList<Object>();
+					l.add(".");
+					symbol.setValue(l);
+					table.put(symbol.getName(), symbol);
+					if ((index < varList.getChildren().size() - 2)) {
+						index = index + 2;
+					}
+					// compare and assign value to the argument
+				}
+				int i = 0; // judge if all the arguments has value
+				Collection<List<Symbol>> values = table.map.values();
+				Iterator<List<Symbol>> iter = values.iterator();
+				while (iter.hasNext()) {
+					List<Symbol> symbols = iter.next();
+					for (Symbol symbol : symbols) {
+						String fn = funName.getValue() + " ";
+						if (symbol.getFuncName().equals(fn)
+								&& (symbol.getValue().get(0).equals("0") || symbol.getValue().get(0).equals("0.0")))
+							i++;
+					}
+				}
+				if (i == 0) {
+					block_stmt(funStmt);
+				}
+			} else {
+				block_stmt(funStmt);
+			}
+		} else {
+			// throw new Exception("The function has not been declared!");
+			throw new Exception("Line: " + t.getLineNum() + ", Position: " + t.getPosition()
+					+ ", The function has not been declared!");
+		}
 	}
 
 	public void if_stmt(TreeNode t) throws Exception {
@@ -193,7 +319,7 @@ public class Sematics {
 			boolean c = judgeCondition(conditionNode);
 			if (c) {
 				stmt(ifStmtNode);
-			} else{
+			} else {
 				if (childNumber == 7) {
 					TreeNode elseStmtNode = t.getChildren().get(6);
 					stmt(elseStmtNode);
@@ -202,7 +328,7 @@ public class Sematics {
 		}
 	}
 
-	public boolean isFirst=true;
+	public boolean isFirst = true;
 
 	public void for_stmt(TreeNode t) throws Exception {
 		if (!t.getChildren().isEmpty()) {
@@ -211,8 +337,8 @@ public class Sematics {
 			TreeNode conditionNode = t.getChildren().get(3);
 			TreeNode addNode = t.getChildren().get(5);
 			TreeNode forStmtNode = t.getChildren().get(7);
-			if (assignNode.getChildren().size() == 4 || assignNode.getChildren().size()==3) {
-				if(assignNode.getChildren().size() == 4)
+			if (assignNode.getChildren().size() == 4 || assignNode.getChildren().size() == 3) {
+				if (assignNode.getChildren().size() == 4)
 					assign_stmt(assignNode);
 				else
 					decl_stmt(assignNode);
@@ -220,15 +346,15 @@ public class Sematics {
 				isInLoop++;
 				scale++;
 				while (c) {
-					stmt(forStmtNode);
-					if(isbreak>0)
-						break;
-					if(isFirst) {
-						isFirst=false;
-					}
-					else {
+
+					if (isFirst) {
+						isFirst = false;
+					} else {
 						table.removeAtLevel(scale);
 					}
+					stmt(forStmtNode);
+					if (isbreak > 0)
+						break;
 					assign_stmt(addNode);
 					c = judgeCondition(conditionNode);
 				}
@@ -237,7 +363,9 @@ public class Sematics {
 				isbreak--;
 
 			} else {
-				System.err.println("The operation on variable is invalid!");
+				// System.err.println("The operation on variable is invalid!");
+				throw new Exception("Line: " + assignNode.getLineNum() + ", Position: " + assignNode.getPosition()
+						+ ", The operation on variable is invalid!");
 			}
 		}
 	}
@@ -252,15 +380,15 @@ public class Sematics {
 			isInLoop++;
 
 			while (istrue) {
-				if (isbreak > 0)
-					break;
-				if(isFirst) {
-					isFirst=false;
-				}
-				else {
+
+				if (isFirst) {
+					isFirst = false;
+				} else {
 					table.removeAtLevel(scale);
 				}
 				stmt(whileStmtNode);
+				if (isbreak > 0)
+					break;
 				istrue = judgeCondition(conditionNode);
 			}
 			isInLoop--;
@@ -268,6 +396,22 @@ public class Sematics {
 		}
 	}
 
+	private String input;
+	public synchronized void setInput(String input) {
+		this.input = input;
+		notify();
+	}
+
+	public synchronized String readInput() throws Exception {
+		String result = null;
+		while (input == null) {
+			wait();
+		}
+		result = input.replaceAll("\r\n", "");
+		input = null;
+		return result;
+	}
+	
 	public void read_stmt(TreeNode t) throws Exception {
 		if (!t.getChildren().isEmpty()) {
 
@@ -276,10 +420,9 @@ public class Sematics {
 			if (variable.getNodeType() == NodeType.VALUE) {
 
 				if (table.contains(variable.getFirstChild().getValue())) {
-					BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-					String str = null;
-					System.out.println("Enter your value:");
-					str = br.readLine();
+					Redirector.updateTextPane("Enter your value:");
+					String str = readInput();
+					
 					// 变量已经被声明
 					if (variable.getChildren().size() == 1) { // 输入变量
 						TreeNode v = variable.getFirstChild(); // 变量
@@ -293,10 +436,10 @@ public class Sematics {
 							symbol.setType(table.get(v.getValue()).getType());
 							symbol.setValue(pre);
 							table.put(symbol.getName(), symbol);
-						}else if((table.get(v.getValue()).getType().equals("double")) && matchInt(str)){
+						} else if ((table.get(v.getValue()).getType().equals("double")) && matchInt(str)) {
 							List<Object> pre = table.get(v.getValue()).getValue();
-							Double strDou=Double.parseDouble(str);
-							String s=strDou.toString();
+							Double strDou = Double.parseDouble(str);
+							String s = strDou.toString();
 							pre.add(0, s);
 							Symbol symbol = table.get(v.getValue());
 							symbol.setName(v.getValue());
@@ -306,7 +449,9 @@ public class Sematics {
 						}
 
 						else {
-							System.err.println("You input value must match with the identifier!");
+							// System.err.println("You input value must match with the identifier!");
+							throw new Exception("Line: " + v.getLineNum() + ", Position: " + v.getPosition()
+									+ ", You input value must match with the identifier!");
 						}
 					} else if (variable.getChildren().size() == 4) {
 						TreeNode v1 = variable.getFirstChild();
@@ -327,31 +472,40 @@ public class Sematics {
 						}
 
 						else {
-							System.err.println("You input value must match with the identifier!");
+							// System.err.println("You input value must match with the identifier!");
+							throw new Exception("Line: " + v1.getLineNum() + ", Position: " + v1.getPosition()
+									+ ", You input value must match with the identifier!");
 						}
 					}
 				} else {
-					System.err.println("The identifier has not be declared!");
+					// System.err.println("The identifier has not be declared!");
+					throw new Exception("Line: " + variable.getFirstChild().getLineNum() + ", Position: "
+							+ variable.getFirstChild().getPosition() + ", The identifier has not be declared!");
 				}
 			} else {
-				System.err.println("The read statement is invalid!");
+				// System.err.println("The read statement is invalid!");
+				throw new Exception("Line: " + variable.getLineNum() + ", Position: " + variable.getPosition()
+						+ ", The read statement is invalid");
 			}
 		}
 	}
 
 	public void write_stmt(TreeNode t) throws Exception {
-		if (t.getChildren().size()>0) {
+		if (t.getChildren().size() > 0) {
 			TreeNode variable = t.getChildren().get(2);
 			if (variable.getNodeType() == NodeType.ARI_EXPR) {
-				String s=calAriExpr(variable).getValue();
+				String s = calAriExpr(variable).getValue();
+				Redirector.updateTextPane(s);
 				System.out.println(calAriExpr(variable).getValue());
 			} else {
-				System.err.println("The read statement is invalid!");
+				// System.err.println("The read statement is invalid!");
+				throw new Exception("Line: " + variable.getLineNum() + ", Position: " + variable.getPosition()
+						+ ", The read statement is invalid");
 			}
 		}
 	}
 
-	public void decl_stmt(TreeNode t) {
+	public void decl_stmt(TreeNode t) throws Exception {
 		if (!t.getChildren().isEmpty()) {
 			Symbol symbol = new Symbol();
 			String type;
@@ -368,10 +522,9 @@ public class Sematics {
 					symbol.setScale(scale);
 
 					List<Object> iniValue = new ArrayList<Object>();
-					if(type.equals("double")) {
+					if (type.equals("double")) {
 						iniValue.add("0.0");
-					}
-					else if(type.equals("int")) {
+					} else if (type.equals("int")) {
 						iniValue.add(0);
 					}
 					// 数组情况
@@ -380,11 +533,10 @@ public class Sematics {
 						TreeNode factor = calAriExpr(exprNode);
 						arrayIndex = Integer.parseInt(factor.getValue());
 						for (int i = 0; i < arrayIndex - 1; i++) {
-							if(type.equals("double")) {
-								iniValue.add(i,"0.0");
-							}
-							else if(type.equals("int")) {
-								iniValue.add(i,0);
+							if (type.equals("double")) {
+								iniValue.add(i, "0.0");
+							} else if (type.equals("int")) {
+								iniValue.add(i, 0);
 							}
 						}
 						symbol.setArrayIndex(arrayIndex);
@@ -398,24 +550,24 @@ public class Sematics {
 
 							// 符号表中存在该符号 并且 当前函数未超出该符号的作用域
 							if (table.contains(name) && table.get(name).getScale() == scale) {
-								errMsg = "变量" + name + "已存在!";
-								System.out.println(errMsg);
-								return;
+								/*
+								 * errMsg = "变量" + name + "已存在!"; System.out.println(errMsg); return;
+								 */
+								throw new Exception(
+										"Line: " + node.getLineNum() + ", Position: " + (node.getPosition() - 1)
+												+ ",  The identifier " + name + " has already been declared!");
 							}
 
 							else if (!table.contains(name)
-									|| ( (table.contains(name) && 
-											(table.get(name).getScale() != scale||table.get(name).getType()!=symbol.getType())
-											)
-											)
-									) {
+									|| ((table.contains(name) && (table.get(name).getScale() != scale
+											|| table.get(name).getType() != symbol.getType())))) {
 								symbol.setName(name);
 							}
 
 							// 声明时赋值
 							if (i + 1 >= temp.getChildren().size()) {
 								table.put(symbol.getName(), symbol);
-								symbol = new Symbol(symbol.getType(), null, scale, null, symbol.getArrayIndex());
+								symbol = new Symbol(symbol.getType(), null, scale, null, symbol.getArrayIndex(), null);
 								return;
 							}
 							TreeNode nextSibling = temp.getChildren().get(i + 1);
@@ -425,19 +577,22 @@ public class Sematics {
 								String IDType = getIDType(assignValue);
 								if (symbol.getType().equals(IDType)) {
 									symbol.setValue(matchType(assignValue));
-								}
-								else if(symbol.getType().equals("double")&&assignValue.getNodeType()==NodeType.INT_NUM){
+								} else if (symbol.getType().equals("double")
+										&& assignValue.getNodeType() == NodeType.INT_NUM) {
 									symbol.setValue(matchType(assignValue));
-								}
-								else {
-									errMsg = "变量类型错误!";
-									System.out.println(errMsg);
-									return;
+								} else {
+									/*
+									 * errMsg = "变量类型错误!"; System.out.println(errMsg); return;
+									 */
+									throw new Exception("Line: " + assignValue.getLineNum() + ", Position: "
+											+ assignValue.getPosition() + ",  The type of the identifier is wrong!");
+
 								}
 								i += 2;
 							}
 							table.put(symbol.getName(), symbol);
-							symbol = new Symbol(symbol.getType(), null, 0, symbol.getValue(), symbol.getArrayIndex());
+							symbol = new Symbol(symbol.getType(), null, 0, symbol.getValue(), symbol.getArrayIndex(),
+									null);
 						}
 
 					}
@@ -446,7 +601,7 @@ public class Sematics {
 		}
 	}
 
-	public void assign_stmt(TreeNode t) {
+	public void assign_stmt(TreeNode t) throws Exception {
 		if (!t.getChildren().isEmpty()) {
 			Symbol symbol = new Symbol();
 			int sub = 0;
@@ -457,10 +612,13 @@ public class Sematics {
 					String variable = value.getValue();
 
 					if (!table.contains(variable)
-							|| ( (table.contains(variable) && table.get(variable).getScale() > scale)) ) {
-						errMsg = "变量"+variable+"未声明!";
-						System.out.println(errMsg);
-						return;
+							|| ((table.contains(variable) && table.get(variable).getScale() > scale))) {
+						/*
+						 * errMsg = "变量"+variable+"未声明!"; System.out.println(errMsg); return;
+						 */
+						throw new Exception("Line: " + value.getLineNum() + ", Position: " + value.getPosition()
+								+ ", The identifier has not been declared!");
+
 					}
 
 					Symbol temp = table.get(variable);
@@ -471,17 +629,21 @@ public class Sematics {
 						TreeNode index = child.getChildren().get(2);
 
 						if (!calAriExpr(index).getNodeType().equals(NodeType.INT_NUM)) {
-							errMsg = "数组长度必须为整数!";
-							System.out.println(errMsg);
-							return;
+							/*
+							 * errMsg = "数组长度必须为整数!"; System.out.println(errMsg); return;
+							 */
+							throw new Exception("Line: " + index.getLineNum() + ", Position: " + index.getPosition()
+									+ ",  The length of the array should be an integer!");
 						}
 
 						// 下标
 						sub = Integer.parseInt(calAriExpr(index).getValue());
 						if (sub > temp.getArrayIndex()) {
-							errMsg = "数组长度大于声明长度!";
-							System.out.println(errMsg);
-							return;
+							/*
+							 * errMsg = "数组长度大于声明长度!"; System.out.println(errMsg); return;
+							 */
+							throw new Exception("Line: " + index.getLineNum() + ", Position: " + index.getPosition()
+									+ ",  The length of the array is greater than the declaration length!");
 						}
 
 					}
@@ -490,42 +652,46 @@ public class Sematics {
 					TreeNode factor = calAriExpr(child);
 					String symbolType = getIDType(factor);
 
-					if (symbol.getType().equals(symbolType)||((symbol.getType().equals("double"))&&symbolType.equals("int"))) {
+					if (symbol.getType().equals(symbolType)
+							|| ((symbol.getType().equals("double")) && symbolType.equals("int"))) {
 						if (symbol.getArrayIndex() == 0) {
-							//symbol.setValue(matchType(factor));
-							if(symbol.getType().equals("double")&&factor.getNodeType()==NodeType.INT_NUM){
-								String s=factor.getValue();
-								Double d=Double.parseDouble(s);
-								List<Object> lo=symbol.getValue();
-								lo.set(0,d);
+							// symbol.setValue(matchType(factor));
+							if (symbol.getType().equals("double") && factor.getNodeType() == NodeType.INT_NUM) {
+								String s = factor.getValue();
+								Double d = Double.parseDouble(s);
+								List<Object> lo = symbol.getValue();
+								lo.set(0, d);
 								symbol.setValue(lo);
-							}else{
+							} else {
 								symbol.setValue(matchType(factor));
 							}
 
-							
-						} 
-						//数组情况
+						}
+						// 数组情况
 						else {
 							List<Object> temp = symbol.getValue();
 							if (sub >= 0 && sub < temp.size()) {
-								Object value=matchType(factor).get(0);
-								if(symbol.getType().equals("double")) {
-									value=Double.parseDouble((String)value);
+								Object value = matchType(factor).get(0);
+								if (symbol.getType().equals("double")) {
+									value = Double.parseDouble((String) value);
 								}
 								temp.set(sub, value);
 								symbol.setValue(temp);
 							} else {
-								errMsg = "数组越界!";
-								System.out.println(errMsg);
-								return;
+								/*
+								 * errMsg = "数组越界!"; System.out.println(errMsg); return;
+								 */
+								throw new Exception("Line: " + factor.getLineNum() + ", Position: "
+										+ (factor.getPosition() + 1) + ",  The array is out of bound!");
 							}
 						}
 						table.put(symbol.getName(), symbol);
 					} else {
-						errMsg = "变量类型错误!";
-						System.out.println(errMsg);
-						return;
+						/*
+						 * errMsg = "变量类型错误!"; System.out.println(errMsg); return;
+						 */
+						throw new Exception("Line: " + factor.getLineNum() + ", Position: " + factor.getPosition()
+								+ ",  The type of identifier is wrong!");
 					}
 				}
 			}
@@ -548,7 +714,7 @@ public class Sematics {
 	}
 
 	// 获得identify节点的内容的节点类型
-	public String getIDType(TreeNode t) {
+	public String getIDType(TreeNode t) throws Exception {
 		NodeType type = t.getNodeType();
 		String symbolType = null;
 		if (type.equals(NodeType.INT_NUM)) {
@@ -561,8 +727,11 @@ public class Sematics {
 			if ((table.contains(t.getValue()) && table.get(t.getValue()).getScale() <= scale)) {
 				symbolType = table.get(t.getValue()).getType();
 			} else {
-				errMsg = "变量" + t.getValue() + "不存在!";
-				System.out.println(errMsg);
+				/*
+				 * errMsg = "变量" + t.getValue() + "不存在!"; System.out.println(errMsg);
+				 */
+				throw new Exception("Line: " + t.getLineNum() + ", Position: " + t.getPosition() + ",  The identifier "
+						+ t.getValue() + " has not been declared!");
 			}
 		}
 		return symbolType;
@@ -570,19 +739,19 @@ public class Sematics {
 
 	static private boolean isInt = true;
 	static private boolean isBool = false;
-	static private boolean isCalEnd=false;
+	static private boolean isCalEnd = false;
+
 	// 计算算术表达式的值
-	public TreeNode calAriExpr(TreeNode t) {
+	public TreeNode calAriExpr(TreeNode t) throws Exception {
 		if (isInt) {
 			isInt = true;
-		}
-		else {
-			if(isCalEnd) {
-				isInt=true;
+		} else {
+			if (isCalEnd) {
+				isInt = true;
 			}
 		}
 		isBool = false;
-		isCalEnd=false;
+		isCalEnd = false;
 		String result = calTerm(t.getNthChild(0)); // 第一个子节点一定是T
 		if (t.getChildren().size() > 1) { // E --> T (+/- T)+ 有多个T
 			String operand = calTerm(t.getNthChild(2));// 第二个T
@@ -628,11 +797,11 @@ public class Sematics {
 			nodeType = NodeType.BOOL;
 		}
 
-		isCalEnd=true;
-		return new TreeNode(nodeType, result, t.getParent());
+		isCalEnd = true;
+		return new TreeNode(nodeType, result, t.getParent(), t.getParent().getLineNum(), t.getParent().getPosition());
 	}
 
-	public String calTerm(TreeNode t) {
+	public String calTerm(TreeNode t) throws Exception {
 		String result = calFactor(t.getNthChild(0));
 		if (t.getChildren().size() > 1) {
 			String operand = calFactor(t.getNthChild(2));
@@ -675,22 +844,22 @@ public class Sematics {
 		return result;
 	}
 
-	public String calFactor(TreeNode t) {
+	public String calFactor(TreeNode t) throws Exception {
 		int childnum = t.getChildren().size();
 		if (childnum == 1) { // F --> INT_NUM||DOUBLE_NUM||VALUE||FALSE||TRUE
 			switch (t.getFirstChild().getNodeType()) {
-				case TRUE:
-				case FALSE:
-					isBool = true;
-					return t.getFirstChild().getValue();
-				case INT_NUM:
-					return t.getFirstChild().getValue();
-				case DOUBLE_NUM:
-					isInt = false;
-					return t.getFirstChild().getValue();
+			case TRUE:
+			case FALSE:
+				isBool = true;
+				return t.getFirstChild().getValue();
+			case INT_NUM:
+				return t.getFirstChild().getValue();
+			case DOUBLE_NUM:
+				isInt = false;
+				return t.getFirstChild().getValue();
 
-				case VALUE:
-					return calValue(t.getFirstChild());
+			case VALUE:
+				return calValue(t.getFirstChild());
 
 			}
 		} else if (childnum == 2) { // F --> -F
@@ -708,35 +877,40 @@ public class Sematics {
 		return null;
 	}
 
-	private String calValue(TreeNode t) {
+	private String calValue(TreeNode t) throws Exception {
 		int childnum = t.getChildren().size();
 		String id = t.getFirstChild().getValue();
 		if (childnum == 1) { // VALUE --> ID
 			if (table.contains(id) && table.get(id).getScale() <= scale) {
-				if(table.get(id).getType().equals("bool")) {
-					isBool=true;
-				}else if (table.get(id).getType().equals("double")) {
-					isInt=false;
+				if (table.get(id).getType().equals("bool")) {
+					isBool = true;
+				} else if (table.get(id).getType().equals("double")) {
+					isInt = false;
 				}
 				return table.get(id).getValue().get(0).toString();
 			} else {
-				errMsg = "变量"+id+"未声明";
-				System.out.println(errMsg);
-				return null;
+				/*
+				 * errMsg = "变量"+id+"未声明"; System.out.println(errMsg); return null;
+				 */
+				throw new Exception("Line: " + t.getNthChild(0).getLineNum() + ", Position: "
+						+ (t.getNthChild(0).getPosition() - 1) + ",  The identifier " + id + " has not been declared!");
 			}
 		} else { // VALUE --> ID[E]
 			int arrnum = (int) (Double.parseDouble(calAriExpr(t.getNthChild(2)).getValue()));
 			if (table.contains(id) && table.get(id).getScale() <= scale) {
-				if(table.get(id).getType().equals("bool")) {
-					isBool=true;
-				}else if (table.get(id).getType().equals("double")) {
-					isInt=false;
+				if (table.get(id).getType().equals("bool")) {
+					isBool = true;
+				} else if (table.get(id).getType().equals("double")) {
+					isInt = false;
 				}
-				return table.get(id).getValue().get(arrnum ).toString();
+				return table.get(id).getValue().get(arrnum).toString();
 			} else {
-				errMsg = "数组未声明";
-				System.out.println(errMsg);
-				return null;
+				throw new Exception("Line: " + t.getNthChild(2).getLineNum() + ", Position: "
+						+ t.getNthChild(2).getPosition() + ",  The array has not been declared!");
+				/*
+				 * errMsg = "数组未声明"; System.out.println(errMsg);
+				 */
+				// return null;
 			}
 		}
 	}

@@ -7,7 +7,7 @@ import java.util.Map;
 import com.sun.org.apache.xpath.internal.operations.And;
 
 public class SymbolTable {
-	private HashMap<String,List<Symbol>> map=new HashMap<String,List<Symbol>>();
+	public HashMap<String,List<Symbol>> map=new HashMap<String,List<Symbol>>();
 	
 	public Symbol get(String s) {
 		List<Symbol> temp=map.get(s);
@@ -39,6 +39,7 @@ public class SymbolTable {
 	public void removeAtLevel(int i) {
 		if(!map.isEmpty()) {
 			Iterator<Map.Entry<String,List<Symbol>>> iter = map.entrySet().iterator();
+			List<String> toRemoveKeys=new ArrayList<String>();
 			while (iter.hasNext()) {
 				Map.Entry<String,List<Symbol>> entry = (Map.Entry<String,List<Symbol>>) iter.next();
 				
@@ -50,12 +51,15 @@ public class SymbolTable {
 
 						map.put(key, val);
 						if(val.isEmpty()) {
-							map.remove(key);
+							toRemoveKeys.add(key);
 						}
 						
 						break;
 					}
 				}
+			}
+			for (String key : toRemoveKeys) {
+				map.remove(key);
 			}
 		}
 	}

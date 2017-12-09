@@ -163,6 +163,8 @@ public class Lexer{
                             return new Token(TokenType.FALSE,"false",charReader.getLineNum(),charReader.getPosition()-5);
                         case "bool":
                             return new Token(TokenType.BOOL,"bool",charReader.getLineNum(),charReader.getPosition()-4);
+                        case "function":
+                        	return new Token(TokenType.FUNCTION,"function",charReader.getLineNum(),charReader.getPosition()-8);
                         default:
                             return new Token(TokenType.IDENT, value,charReader.getLineNum(),charReader.getPosition()-value.length());
                     }
