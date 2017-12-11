@@ -3,6 +3,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Scanner;
 
 /**
@@ -14,7 +15,19 @@ public class test {
         if(args.length==1){
             path = args[0];
             
+           Parser parser=new Parser(path);
+           //语义分析
            sematics(path);
+           //词法分析
+           //List<Token> tokenList=parser.getTokenList();
+           //for (Token token : tokenList) {
+			//System.out.println(token.toString());
+			//}
+           
+           //语法
+			//TreeNode treeNode = parser.parseProgram();
+	        //parse(treeNode);
+		
            
         }else{
             System.out.println("arguement missing");
@@ -29,8 +42,8 @@ public class test {
     	Sematics s=new Sematics(path);
     	SymbolTable symbols=s.getTable();
     	symbols.printTable();
-    	TreeNode treeNode = s.getParser().parseProgram();
-        parse(treeNode);
+    	//TreeNode treeNode = s.getParser().parseProgram();
+        //parse(treeNode);
     }
     public static void parse(TreeNode treeNode) {
     	System.out.print("    "+treeNode.getValue());

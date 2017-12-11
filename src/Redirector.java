@@ -14,59 +14,39 @@ import com.sun.jndi.url.iiopname.iiopnameURLContextFactory;
 import com.sun.org.apache.xpath.internal.axes.WalkingIterator;
 
 import jdk.internal.dynalink.beans.StaticClass;
+import sun.applet.Main;
 
 public class Redirector{
 
-	static JTextPane textPane = MainFrame.tabConsolePane;
+	static JTextPane consolePane = MainFrame.tabConsolePane;
+	static JTextPane errorPane=MainFrame.tabErrorPane;
 	public static boolean hasInput=false;
-	public static void updateTextPane(final String text) {
+	
+	public static void updateConsolePane(final String text) {
 		SwingUtilities.invokeLater(new Runnable() {
 			public void run() {
-				Document doc = textPane.getDocument();
+				Document doc = consolePane.getDocument();
 				try {
 					doc.insertString(doc.getLength(), text + "\r\n", null);
 				} catch (BadLocationException e) {
 					throw new RuntimeException(e);
 				}
-				textPane.setCaretPosition(doc.getLength());
+				consolePane.setCaretPosition(doc.getLength());
 			}
 		});
 	}
 	
-	public static void input() throws Exception {
-		System.out.println("In input");
-		textPane.addKeyListener(new KeyAdapter() {
-			
-			public void keyPressed(KeyEvent event) {
-				if(event.getKeyCode()==event.VK_ENTER) {
-					hasInput=true;
+	public static void updateErrorPane(final String text) {
+		SwingUtilities.invokeLater(new Runnable() {
+			public void run() {
+				Document doc = errorPane.getDocument();
+				try {
+					doc.insertString(doc.getLength(), text + "\r\n", null);
+				} catch (BadLocationException e) {
+					throw new RuntimeException(e);
 				}
+				errorPane.setCaretPosition(doc.getLength());
 			}
-			
-			
 		});
-	}
-
-	
-	private void redirectSystemStreams() {
-		OutputStream out = new OutputStream() {
-			@Override
-			public void write(final int b) throws IOException {
-				updateTextPane(String.valueOf((char) b));
-			}
-
-			@Override
-			public void write(byte[] b, int off, int len) throws IOException {
-				updateTextPane(new String(b, off, len));
-			}
-
-			@Override
-			public void write(byte[] b) throws IOException {
-				write(b, 0, b.length);
-			}
-		};
-
-		System.setOut(new PrintStream(out, true));
-		System.setErr(new PrintStream(out, true));
 	}
 }

@@ -45,4 +45,10 @@ public class Token {
     public void setPosition(int position) {
         this.position = position;
     }
+
+	@Override
+	public String toString() {
+		return "Token [tokenType=" + tokenType + ", value=" + value + ", lineNum=" + lineNum + ", position=" + position
+				+ "]";
+	}
 }

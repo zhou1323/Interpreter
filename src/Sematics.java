@@ -97,7 +97,7 @@ public class Sematics extends Thread{
 				/*
 				 * errMsg = "break只能用在循环语句中"; System.out.println(errMsg);
 				 */
-				throw new Exception("Line: " + temp.getLineNum() + ", Position: " + temp.getPosition()
+				Redirector.updateErrorPane("Line: " + temp.getLineNum() + ", Position: " + temp.getPosition()
 						+ ", The 'Break' can only been used in circular statement !");
 			}
 		}
@@ -240,19 +240,19 @@ public class Sematics extends Thread{
 					} else {
 						// throw new Exception("The type of your input number can't match with the
 						// identity type of the function!");
-						throw new Exception("Line: " + fNode.getLineNum() + ", Position: " + fNode.getPosition()
+						Redirector.updateErrorPane("Line: " + fNode.getLineNum() + ", Position: " + fNode.getPosition()
 								+ ", The type of your input number can't match with the identity type of the function!");
 					}
 				}
 
 			} else {
 				// throw new Exception("The function has not been declared!");
-				throw new Exception("Line: " + funName.getLineNum() + ", Position: " + funName.getPosition()
+				Redirector.updateErrorPane("Line: " + funName.getLineNum() + ", Position: " + funName.getPosition()
 						+ ", The function has not been declared!");
 			}
 		} else {
 			// throw new Exception("The function has not been declared!");
-			throw new Exception("Line: " + t.getLineNum() + ", Position: " + t.getPosition()
+			Redirector.updateErrorPane("Line: " + t.getLineNum() + ", Position: " + t.getPosition()
 					+ ", The function has not been declared!");
 		}
 	}
@@ -304,7 +304,7 @@ public class Sematics extends Thread{
 			}
 		} else {
 			// throw new Exception("The function has not been declared!");
-			throw new Exception("Line: " + t.getLineNum() + ", Position: " + t.getPosition()
+			Redirector.updateErrorPane("Line: " + t.getLineNum() + ", Position: " + t.getPosition()
 					+ ", The function has not been declared!");
 		}
 	}
@@ -364,7 +364,7 @@ public class Sematics extends Thread{
 
 			} else {
 				// System.err.println("The operation on variable is invalid!");
-				throw new Exception("Line: " + assignNode.getLineNum() + ", Position: " + assignNode.getPosition()
+				Redirector.updateErrorPane("Line: " + assignNode.getLineNum() + ", Position: " + assignNode.getPosition()
 						+ ", The operation on variable is invalid!");
 			}
 		}
@@ -420,7 +420,7 @@ public class Sematics extends Thread{
 			if (variable.getNodeType() == NodeType.VALUE) {
 
 				if (table.contains(variable.getFirstChild().getValue())) {
-					Redirector.updateTextPane("Enter your value:");
+					Redirector.updateConsolePane("Enter your value:");
 					String str = readInput();
 					
 					// 变量已经被声明
@@ -450,7 +450,7 @@ public class Sematics extends Thread{
 
 						else {
 							// System.err.println("You input value must match with the identifier!");
-							throw new Exception("Line: " + v.getLineNum() + ", Position: " + v.getPosition()
+							Redirector.updateErrorPane("Line: " + v.getLineNum() + ", Position: " + v.getPosition()
 									+ ", You input value must match with the identifier!");
 						}
 					} else if (variable.getChildren().size() == 4) {
@@ -473,18 +473,18 @@ public class Sematics extends Thread{
 
 						else {
 							// System.err.println("You input value must match with the identifier!");
-							throw new Exception("Line: " + v1.getLineNum() + ", Position: " + v1.getPosition()
+							Redirector.updateErrorPane("Line: " + v1.getLineNum() + ", Position: " + v1.getPosition()
 									+ ", You input value must match with the identifier!");
 						}
 					}
 				} else {
 					// System.err.println("The identifier has not be declared!");
-					throw new Exception("Line: " + variable.getFirstChild().getLineNum() + ", Position: "
+					Redirector.updateErrorPane("Line: " + variable.getFirstChild().getLineNum() + ", Position: "
 							+ variable.getFirstChild().getPosition() + ", The identifier has not be declared!");
 				}
 			} else {
 				// System.err.println("The read statement is invalid!");
-				throw new Exception("Line: " + variable.getLineNum() + ", Position: " + variable.getPosition()
+				Redirector.updateErrorPane("Line: " + variable.getLineNum() + ", Position: " + variable.getPosition()
 						+ ", The read statement is invalid");
 			}
 		}
@@ -495,11 +495,11 @@ public class Sematics extends Thread{
 			TreeNode variable = t.getChildren().get(2);
 			if (variable.getNodeType() == NodeType.ARI_EXPR) {
 				String s = calAriExpr(variable).getValue();
-				Redirector.updateTextPane(s);
+				Redirector.updateConsolePane(s);
 				System.out.println(calAriExpr(variable).getValue());
 			} else {
 				// System.err.println("The read statement is invalid!");
-				throw new Exception("Line: " + variable.getLineNum() + ", Position: " + variable.getPosition()
+				Redirector.updateErrorPane("Line: " + variable.getLineNum() + ", Position: " + variable.getPosition()
 						+ ", The read statement is invalid");
 			}
 		}
@@ -553,7 +553,7 @@ public class Sematics extends Thread{
 								/*
 								 * errMsg = "变量" + name + "已存在!"; System.out.println(errMsg); return;
 								 */
-								throw new Exception(
+								Redirector.updateErrorPane(
 										"Line: " + node.getLineNum() + ", Position: " + (node.getPosition() - 1)
 												+ ",  The identifier " + name + " has already been declared!");
 							}
@@ -573,20 +573,65 @@ public class Sematics extends Thread{
 							TreeNode nextSibling = temp.getChildren().get(i + 1);
 							if (nextSibling.getNodeType().equals(NodeType.ASSIGN)) {
 								TreeNode exprNode = temp.getChildren().get(i + 2);
-								TreeNode assignValue = calAriExpr(exprNode);
-								String IDType = getIDType(assignValue);
-								if (symbol.getType().equals(IDType)) {
-									symbol.setValue(matchType(assignValue));
-								} else if (symbol.getType().equals("double")
-										&& assignValue.getNodeType() == NodeType.INT_NUM) {
-									symbol.setValue(matchType(assignValue));
-								} else {
-									/*
-									 * errMsg = "变量类型错误!"; System.out.println(errMsg); return;
-									 */
-									throw new Exception("Line: " + assignValue.getLineNum() + ", Position: "
-											+ assignValue.getPosition() + ",  The type of the identifier is wrong!");
-
+								
+								if(!exprNode.getValue().equals("arrayValue")) {
+									TreeNode assignValue = calAriExpr(exprNode);
+									String IDType = getIDType(assignValue);
+									if (symbol.getType().equals(IDType)) {
+										symbol.setValue(matchType(assignValue));
+									} else if (symbol.getType().equals("double")
+											&& assignValue.getNodeType() == NodeType.INT_NUM) {
+										symbol.setValue(matchType(assignValue));
+									} else {
+										/*
+										 * errMsg = "变量类型错误!"; System.out.println(errMsg); return;
+										 */
+										Redirector.updateErrorPane("Line: " + assignValue.getLineNum() + ", Position: "
+												+ assignValue.getPosition() + ",  The type of the identifier is wrong!");
+	
+									}
+								}
+								else {
+									TreeNode arrayValueNode=exprNode;
+									int arrayNum=-1;
+									if(symbol.getArrayIndex()*2-1>=arrayValueNode.getChildren().size()-2) {
+										for (TreeNode t0 : arrayValueNode.getChildren()) {
+											if (t0.getValue().equals("E")) {
+												arrayNum++;
+												TreeNode assignValue = calAriExpr(t0);
+												String IDType = getIDType(assignValue);
+												if (symbol.getType().equals(IDType)) {
+													List<Object> resultValue=symbol.getValue();
+													List<Object> originValue=matchType(assignValue);
+													
+													resultValue.set(arrayNum, originValue.get(0));
+													
+													symbol.setValue(resultValue);
+												} else if (symbol.getType().equals("double")
+														&& assignValue.getNodeType() == NodeType.INT_NUM) {
+													List<Object> resultValue=symbol.getValue();
+													List<Object> originValue=matchType(assignValue);
+													
+													resultValue.set(arrayNum, originValue.get(0));
+													
+													symbol.setValue(resultValue);
+												} else {
+													/*
+													 * errMsg = "变量类型错误!"; System.out.println(errMsg); return;
+													 */
+													Redirector.updateErrorPane("Line: " + assignValue.getLineNum() + ", Position: "
+															+ assignValue.getPosition() + ",  The type of the identifier is wrong!");
+				
+												}
+											}
+										}
+									}
+									
+									//赋值数大于声明数
+									else {
+										Redirector.updateErrorPane("Line: " + exprNode.getLineNum() + ", Position: " + exprNode.getPosition()
+										+ ",  The length of the array is greater than the declaration length!");
+									}
 								}
 								i += 2;
 							}
@@ -616,7 +661,7 @@ public class Sematics extends Thread{
 						/*
 						 * errMsg = "变量"+variable+"未声明!"; System.out.println(errMsg); return;
 						 */
-						throw new Exception("Line: " + value.getLineNum() + ", Position: " + value.getPosition()
+						Redirector.updateErrorPane("Line: " + value.getLineNum() + ", Position: " + value.getPosition()
 								+ ", The identifier has not been declared!");
 
 					}
@@ -632,7 +677,7 @@ public class Sematics extends Thread{
 							/*
 							 * errMsg = "数组长度必须为整数!"; System.out.println(errMsg); return;
 							 */
-							throw new Exception("Line: " + index.getLineNum() + ", Position: " + index.getPosition()
+							Redirector.updateErrorPane("Line: " + index.getLineNum() + ", Position: " + index.getPosition()
 									+ ",  The length of the array should be an integer!");
 						}
 
@@ -642,7 +687,7 @@ public class Sematics extends Thread{
 							/*
 							 * errMsg = "数组长度大于声明长度!"; System.out.println(errMsg); return;
 							 */
-							throw new Exception("Line: " + index.getLineNum() + ", Position: " + index.getPosition()
+							Redirector.updateErrorPane("Line: " + index.getLineNum() + ", Position: " + index.getPosition()
 									+ ",  The length of the array is greater than the declaration length!");
 						}
 
@@ -681,7 +726,7 @@ public class Sematics extends Thread{
 								/*
 								 * errMsg = "数组越界!"; System.out.println(errMsg); return;
 								 */
-								throw new Exception("Line: " + factor.getLineNum() + ", Position: "
+								Redirector.updateErrorPane("Line: " + factor.getLineNum() + ", Position: "
 										+ (factor.getPosition() + 1) + ",  The array is out of bound!");
 							}
 						}
@@ -690,7 +735,7 @@ public class Sematics extends Thread{
 						/*
 						 * errMsg = "变量类型错误!"; System.out.println(errMsg); return;
 						 */
-						throw new Exception("Line: " + factor.getLineNum() + ", Position: " + factor.getPosition()
+						Redirector.updateErrorPane("Line: " + factor.getLineNum() + ", Position: " + factor.getPosition()
 								+ ",  The type of identifier is wrong!");
 					}
 				}
@@ -730,7 +775,7 @@ public class Sematics extends Thread{
 				/*
 				 * errMsg = "变量" + t.getValue() + "不存在!"; System.out.println(errMsg);
 				 */
-				throw new Exception("Line: " + t.getLineNum() + ", Position: " + t.getPosition() + ",  The identifier "
+				Redirector.updateErrorPane("Line: " + t.getLineNum() + ", Position: " + t.getPosition() + ",  The identifier "
 						+ t.getValue() + " has not been declared!");
 			}
 		}
@@ -892,7 +937,7 @@ public class Sematics extends Thread{
 				/*
 				 * errMsg = "变量"+id+"未声明"; System.out.println(errMsg); return null;
 				 */
-				throw new Exception("Line: " + t.getNthChild(0).getLineNum() + ", Position: "
+				Redirector.updateErrorPane("Line: " + t.getNthChild(0).getLineNum() + ", Position: "
 						+ (t.getNthChild(0).getPosition() - 1) + ",  The identifier " + id + " has not been declared!");
 			}
 		} else { // VALUE --> ID[E]
@@ -905,7 +950,7 @@ public class Sematics extends Thread{
 				}
 				return table.get(id).getValue().get(arrnum).toString();
 			} else {
-				throw new Exception("Line: " + t.getNthChild(2).getLineNum() + ", Position: "
+				Redirector.updateErrorPane("Line: " + t.getNthChild(2).getLineNum() + ", Position: "
 						+ t.getNthChild(2).getPosition() + ",  The array has not been declared!");
 				/*
 				 * errMsg = "数组未声明"; System.out.println(errMsg);

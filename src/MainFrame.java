@@ -5,11 +5,11 @@ import javax.swing.border.BevelBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.plaf.BorderUIResource;
-import javax.swing.text.BadLocationException;
-import javax.swing.text.DefaultStyledDocument;
-import javax.swing.text.StyleContext;
-import javax.swing.text.StyledDocument;
+import javax.swing.text.*;
+import javax.swing.text.rtf.RTFEditorKit;
 import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.undo.UndoManager;
+
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -70,6 +70,7 @@ public class MainFrame extends JFrame{
 	private JMenuItem authorItem;
 	/*****文本编辑区********/
 	private int lineNum=30;
+	public static Font font = new Font("微软雅黑 Light", Font.PLAIN, 15);
 	private JTabbedPane editTabbedPane;
 	private List<EditScrollPane> editPaneList = new ArrayList<>();
 	//编辑区的右键菜单
@@ -109,6 +110,9 @@ public class MainFrame extends JFrame{
 	List<Token> tokens;
 	Parser parser;
 	Sematics sematics;
+	
+	//撤销功能
+	private UndoManager um;
 	/**
 	 * 构造函数
 	 * @param title
@@ -378,7 +382,49 @@ public class MainFrame extends JFrame{
 
 			}
 		});
+		fontItem.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent paramActionEvent) {
+//				System.out.print(1);
+				setFont();
+			}
+		});
+		aboutItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				JOptionPane.showMessageDialog(getContentPane(),"此产品是一个简单的CMM语言解释器" +
+						"，\n可以对一段CMM程序进行简单的词法语法分析，\n并将分析结果在视图中显示，\n" +
+						"程序运行结果会在控制台中显示，\n还能进行打印一些基本的报错信息","关于",JOptionPane.INFORMATION_MESSAGE);
+			}
+		});
+		authorItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				JOptionPane.showMessageDialog(getContentPane(),"制作人：（无排名先后）\n" +
+						"周慕哲，2015302580231\n" +
+						"胡苏扬，2015302580206\n" +
+						"蔡中超，2015302580220","作者",JOptionPane.INFORMATION_MESSAGE);
+			}
+		});
+		
+		undoItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (um.canUndo()) {
+                    um.undo();
+                    um.undo();
+                }
+            }   
+        });
 
+		redoItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (um.canRedo()) {
+                    um.redo();
+                    um.redo();
+                }
+            }   
+        });
 	}
 
     /**
@@ -393,9 +439,13 @@ public class MainFrame extends JFrame{
 	    editorPane.setFilename(filename);
 	    JScrollPane untitledPane = editorPane.getEditPane();
 	    JTextPane textPane =editorPane.getTextPane();
+	    
 	    //初始化
+	    um = new UndoManager();
+        textPane.getDocument().addUndoableEditListener(um);
 	    editorPane.initialize(lineNum);
-		textPane.setFont(new Font("微软雅黑",Font.PLAIN,16));
+		textPane.setFont(font);
+		textPane.getDocument().addDocumentListener(new SyntaxHighlighter(textPane));
         textPane.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseReleased(MouseEvent e) {
@@ -417,7 +467,7 @@ public class MainFrame extends JFrame{
 			public void insertUpdate(DocumentEvent e) {
 				lblTitle.setText("*"+filename);
 				editPaneList.get(index).setIschange(true);
-				
+
 				DefaultListModel dlm=editorPane.getDlm();
 				JList list=editorPane.getList();
 				int lastLine=(int)dlm.get(dlm.size()-1);
@@ -483,8 +533,7 @@ public class MainFrame extends JFrame{
 						public void mouseReleased(MouseEvent e) {
 							if(SwingUtilities.isLeftMouseButton(e)){
 								System.out.println(i);
-								editTabbedPane.removeTabAt(i);
-								editPaneList.remove(i);
+								close(i);
 							}
 						}
 					});
@@ -493,8 +542,7 @@ public class MainFrame extends JFrame{
 						public void actionPerformed(ActionEvent e) {
 							for(int j = 0; j <= editTabbedPane.getTabCount()-1;j++){
 								if (i != j) {
-									editTabbedPane.removeTabAt(j);
-									editPaneList.remove(j);
+									close(j);
 								}
 							}
 						}
@@ -613,6 +661,7 @@ public class MainFrame extends JFrame{
 			}
 		}
     }
+    //关闭文件
     private void close(int index){
 		if(editPaneList.get(index).isIschange()){
 			int option = JOptionPane.showInternalConfirmDialog(editTabbedPane.getParent(),
@@ -645,7 +694,6 @@ public class MainFrame extends JFrame{
 	 * @throws IOException
 	 */
 	public void lex(String path)throws FileNotFoundException,IOException{
-    	StringBuilder stringBuilder = new StringBuilder();
 		lexer = new Lexer(path);
 		tokens = new ArrayList<>();
 		Token token = lexer.nextToken();
@@ -701,9 +749,27 @@ public class MainFrame extends JFrame{
 		sematics = new Sematics(path);
 		sematics.start();
 	}
+
+	private void setFont(){
+		font = JFontDialog
+				.showDialog(getContentPane(), "字体设置", true, getFont());
+		for (int i = 0; i < editTabbedPane.getTabCount(); i++) {
+			editPaneList.get(i).getTextPane().setFont(font);
+			FontMetrics fm = Toolkit.getDefaultToolkit().getFontMetrics(font);
+			editPaneList.get(i).getList().setFixedCellHeight(fm.getHeight());
+			editPaneList.get(i).getList().setFont(new Font("微软雅黑 Light",Font.PLAIN,font.getSize()));
+		}
+
+	}
 	public static void main(String[] args) {
 		MainFrame frame = new MainFrame("CMM解释器");
-		frame.setFont(new Font("微软雅黑", Font.PLAIN, 16));
+		frame.setFont(new Font("微软雅黑", Font.PLAIN, 15));
+		if(("/*\n" +
+				"output:\n" +
+				"报错:报错信息可能各异\n" +
+				"*/").matches("/\\*(\\s|.)*?\\*/")){
+			System.out.print("pipei");
+		}
 
 	}
 }

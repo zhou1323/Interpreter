@@ -524,6 +524,38 @@ public class Parser{
         return valueNode;
     }
 
+    /**
+     * 解析arrayValue语句
+     * arrayValue --> { Value (,Value)* }
+     * @return
+     * @throws ParserException
+     */
+    private TreeNode parseArrayValue() throws ParserException{
+    	TreeNode arrayValueNode = new TreeNode(NodeType.VALUE,"arrayValue",null,getCurrToken().getLineNum(), getCurrToken().getPosition());
+        List<TreeNode> arrayValueNodeChildren = arrayValueNode.getChildren();
+        
+        consumeNextToken(TokenType.L_BRACE);
+        arrayValueNodeChildren.add(new TreeNode(NodeType.L_BRACE,"{",arrayValueNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
+        
+        TreeNode ariExpr = parseAriExpr();
+        ariExpr.setParent(arrayValueNode);
+        arrayValueNodeChildren.add(ariExpr);
+        
+        while(getNextTokenType()==TokenType.COMMA){
+            consumeNextToken(TokenType.COMMA);
+            arrayValueNodeChildren.add(new TreeNode(NodeType.COMMA,",",arrayValueNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
+            
+            TreeNode ariExpr0 = parseAriExpr();
+            ariExpr0.setParent(arrayValueNode);
+            arrayValueNodeChildren.add(ariExpr0);
+            
+        }
+        
+        consumeNextToken(TokenType.R_BRACE);
+        arrayValueNodeChildren.add(new TreeNode(NodeType.R_BRACE,"}",arrayValueNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
+        
+        return arrayValueNode;
+    }
 //    private TreeNode parseConstant()throws ParserException{
 //        TreeNode constantNode = new TreeNode(NodeType.CONSTANT,"constant",null);
 //        List<TreeNode> constNodeChildren = constantNode.getChildren();
@@ -812,9 +844,17 @@ public class Parser{
         if(getNextTokenType()== TokenType.ASSIGN){
             consumeNextToken(TokenType.ASSIGN);
             varListNodeChildren.add(new TreeNode(NodeType.ASSIGN,"=",varListNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
-            TreeNode ariExpr = parseAriExpr();
-            ariExpr.setParent(varListNode);
-            varListNodeChildren.add(ariExpr);
+            if(getNextTokenType()==TokenType.L_BRACE) {
+            	TreeNode arrValue=parseArrayValue();
+            	arrValue.setParent(varListNode);
+            	varListNodeChildren.add(arrValue);
+            }
+            else {
+            	TreeNode ariExpr = parseAriExpr();
+                ariExpr.setParent(varListNode);
+                varListNodeChildren.add(ariExpr);
+            }
+            
         }
         while(getNextTokenType()==TokenType.COMMA){
             consumeNextToken(TokenType.COMMA);

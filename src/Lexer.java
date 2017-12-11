@@ -90,7 +90,7 @@ public class Lexer{
                                 comment+=charReader.nextChar();
                                 if(charReader.peekChar() == '/'){
                                     comment+=charReader.nextChar();
-                                    return new Token(TokenType.MUL_COMMENT,"/*"+comment,comLineNo,composition-2);
+                                    return new Token(TokenType.MUL_COMMENT,"/*"+comment,comLineNo,composition-1);
                                 }else{
                                     comment += charReader.nextChar();
                                 }
@@ -111,7 +111,7 @@ public class Lexer{
                     while(!isWhiteSpace(charReader.peekChar())&&!isOp(charReader.peekChar())&&!isSpecialSymbol(charReader.peekChar())){
                         s+=charReader.nextChar();
                     }
-                    return new Token(TokenType.ERR_TOKEN,s,charReader.getLineNum(),charReader.getPosition()-s.length());
+                    return new Token(TokenType.ERR_TOKEN,s,charReader.getLineNum(),charReader.getPosition()-s.length()+1);
                 }else{
                     charReader.nextChar();
                     return new Token(TokenType.NOT_EQUAL,"!=",charReader.getLineNum(),charReader.getPosition());
@@ -140,33 +140,33 @@ public class Lexer{
                     }
                     switch (value){
                         case "if":
-                            return new Token(TokenType.IF,"if",charReader.getLineNum(),charReader.getPosition()-2);
+                            return new Token(TokenType.IF,"if",charReader.getLineNum(),charReader.getPosition()-1);
                         case "else":
-                            return new Token(TokenType.ELSE,"else",charReader.getLineNum(),charReader.getPosition()-4);
+                            return new Token(TokenType.ELSE,"else",charReader.getLineNum(),charReader.getPosition()-3);
                         case "for":
-                            return new Token(TokenType.FOR,"for",charReader.getLineNum(),charReader.getPosition()-3);
+                            return new Token(TokenType.FOR,"for",charReader.getLineNum(),charReader.getPosition()-2);
                         case "while":
-                            return new Token(TokenType.WHILE,"while",charReader.getLineNum(),charReader.getPosition()-5);
+                            return new Token(TokenType.WHILE,"while",charReader.getLineNum(),charReader.getPosition()-4);
                         case "break":
-                            return new Token(TokenType.BREAK,"break",charReader.getLineNum(),charReader.getPosition()-5);
+                            return new Token(TokenType.BREAK,"break",charReader.getLineNum(),charReader.getPosition()-4);
                         case "read":
-                            return new Token(TokenType.READ,"read",charReader.getLineNum(),charReader.getPosition()-4);
+                            return new Token(TokenType.READ,"read",charReader.getLineNum(),charReader.getPosition()-3);
                         case "write":
-                            return new Token(TokenType.WRITE,"write",charReader.getLineNum(),charReader.getPosition()-5);
+                            return new Token(TokenType.WRITE,"write",charReader.getLineNum(),charReader.getPosition()-4);
                         case "int":
-                            return new Token(TokenType.INT,"int",charReader.getLineNum(),charReader.getPosition()-3);
+                            return new Token(TokenType.INT,"int",charReader.getLineNum(),charReader.getPosition()-2);
                         case "double":
-                            return new Token(TokenType.DOUBLE,"double",charReader.getLineNum(),charReader.getPosition()-6);
+                            return new Token(TokenType.DOUBLE,"double",charReader.getLineNum(),charReader.getPosition()-5);
                         case "true":
-                            return new Token(TokenType.TRUE,"true",charReader.getLineNum(),charReader.getPosition()-4);
+                            return new Token(TokenType.TRUE,"true",charReader.getLineNum(),charReader.getPosition()-3);
                         case "false":
-                            return new Token(TokenType.FALSE,"false",charReader.getLineNum(),charReader.getPosition()-5);
+                            return new Token(TokenType.FALSE,"false",charReader.getLineNum(),charReader.getPosition()-4);
                         case "bool":
-                            return new Token(TokenType.BOOL,"bool",charReader.getLineNum(),charReader.getPosition()-4);
+                            return new Token(TokenType.BOOL,"bool",charReader.getLineNum(),charReader.getPosition()-3);
                         case "function":
-                        	return new Token(TokenType.FUNCTION,"function",charReader.getLineNum(),charReader.getPosition()-8);
+                        	return new Token(TokenType.FUNCTION,"function",charReader.getLineNum(),charReader.getPosition()-7);
                         default:
-                            return new Token(TokenType.IDENT, value,charReader.getLineNum(),charReader.getPosition()-value.length());
+                            return new Token(TokenType.IDENT, value,charReader.getLineNum(),charReader.getPosition()-value.length()+1);
                     }
 
                 }else if(Character.isDigit(charReader.peekChar())){
@@ -181,24 +181,24 @@ public class Lexer{
                                     System.err.println("Line:"+ charReader.getLineNum()+",Position:"+charReader.getPosition()+",Not a Hex Character");
                                     while(!isWhiteSpace(charReader.peekChar())&&!isOp(charReader.peekChar())&&!isSpecialSymbol(charReader.peekChar()))
                                         s+=charReader.nextChar();
-                                    return new Token(TokenType.ERR_TOKEN,s,charReader.getLineNum(),charReader.getPosition()-s.length());
+                                    return new Token(TokenType.ERR_TOKEN,s,charReader.getLineNum(),charReader.getPosition()-s.length()+1);
                                 }
                             }
-                            return new Token(TokenType.INT_NUM,s,charReader.getLineNum(),charReader.getPosition()-s.length());
+                            return new Token(TokenType.INT_NUM,s,charReader.getLineNum(),charReader.getPosition()-s.length()+1);
                         }else{
                             while(Character.isDigit(charReader.peekChar())||charReader.peekChar()=='.'){
                                 s += charReader.nextChar();
                             }
                             if(s.matches("[0-9]+")){
-                                return new Token(TokenType.INT_NUM,s,charReader.getLineNum(),charReader.getPosition()-s.length());
+                                return new Token(TokenType.INT_NUM,s,charReader.getLineNum(),charReader.getPosition()-s.length()+1);
                             }else if(s.matches("[0-9]+.[0-9]+")){
-                                return new Token(TokenType.DOUBLE_NUM,s,charReader.getLineNum(),charReader.getPosition()-s.length());
+                                return new Token(TokenType.DOUBLE_NUM,s,charReader.getLineNum(),charReader.getPosition()-s.length()+1);
                             }else{
                                 System.err.println("Line:"+charReader.getLineNum()+", Position:"+ (charReader.getPosition()-s.length()+s.lastIndexOf(".")+", Invalid Number Format"));
                                 while(!isWhiteSpace(charReader.peekChar())&&!isOp(charReader.peekChar())&&!isSpecialSymbol(charReader.peekChar())){
                                     s+=charReader.nextChar();
                                 }
-                                return new Token(TokenType.ERR_TOKEN,s,charReader.getLineNum(),charReader.getPosition()-s.length());
+                                return new Token(TokenType.ERR_TOKEN,s,charReader.getLineNum(),charReader.getPosition()-s.length()+1);
                             }
                         }
                     }else{
@@ -207,15 +207,15 @@ public class Lexer{
                             value += charReader.nextChar();
                         }
                         if(value.matches("[0-9]+")){
-                            return new Token(TokenType.INT_NUM,value,charReader.getLineNum(),charReader.getPosition()-value.length());
+                            return new Token(TokenType.INT_NUM,value,charReader.getLineNum(),charReader.getPosition()-value.length()+1);
                         }else if(value.matches("[0-9]+.[0-9]+")){
-                            return new Token(TokenType.DOUBLE_NUM,value,charReader.getLineNum(),charReader.getPosition()-value.length());
+                            return new Token(TokenType.DOUBLE_NUM,value,charReader.getLineNum(),charReader.getPosition()-value.length()+1);
                         }else{
                             System.err.println("Line:"+charReader.getLineNum()+", Position:"+ (charReader.getPosition()-value.length()+value.lastIndexOf(".")+", Invalid Number Format"));
                             while(!isWhiteSpace(charReader.peekChar())&&!isOp(charReader.peekChar())&&!isSpecialSymbol(charReader.peekChar())){
                                 value+=charReader.nextChar();
                             }
-                            return new Token(TokenType.ERR_TOKEN,value,charReader.getLineNum(),charReader.getPosition()-value.length());
+                            return new Token(TokenType.ERR_TOKEN,value,charReader.getLineNum(),charReader.getPosition()-value.length()+1);
                         }
                     }
 
@@ -229,7 +229,7 @@ public class Lexer{
                             break;
                         }
                     }
-                    return new Token(TokenType.ERR_TOKEN,s,charReader.getLineNum(),charReader.getPosition()-s.length());
+                    return new Token(TokenType.ERR_TOKEN,s,charReader.getLineNum(),charReader.getPosition()-s.length()+1);
                 }
         }
 
