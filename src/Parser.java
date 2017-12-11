@@ -101,8 +101,10 @@ public class Parser{
             getTokenListIterator().next();
         }else{
             Token token = getTokenListIterator().next();
-            throw new ParserException("Line:"+token.getLineNum()+
-                    ", Position:"+token.getPosition()+"; unexpected token");
+            String errMsg="Line:"+token.getLineNum()+
+                    ", Position:"+token.getPosition()+"; unexpected token";
+            Redirector.updateErrorPane(errMsg);
+            throw new ParserException(errMsg);
         }
     }
 
@@ -178,7 +180,7 @@ public class Parser{
                 case END_OF_DOC:
 
                 default:
-                    throw new ParserException("");
+                	throw new ParserException("");
             }
 
             childNode.setParent(stmtNode);
@@ -824,8 +826,10 @@ public class Parser{
             logOpChildren.add(new TreeNode(NodeType.NOT_EQUAL,"!=",logOpNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         }else{
             Token token = getTokenListIterator().next();
-            throw new ParserException("Line:"+token.getLineNum()+
-                    ", Position:"+token.getPosition()+"; should be logical operator");
+            String errMsg="Line:"+token.getLineNum()+
+                    ", Position:"+token.getPosition()+"; should be logical operator";
+            Redirector.updateErrorPane(errMsg);
+            throw new ParserException(errMsg);
         }
         return logOpNode;
     }

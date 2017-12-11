@@ -4,12 +4,14 @@ import javax.swing.*;
 import javax.swing.border.BevelBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.event.UndoableEditEvent;
+import javax.swing.event.UndoableEditListener;
 import javax.swing.plaf.BorderUIResource;
 import javax.swing.text.*;
 import javax.swing.text.rtf.RTFEditorKit;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.undo.UndoManager;
-
+import javax.swing.undo.UndoableEdit;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -34,6 +36,7 @@ public class MainFrame extends JFrame{
 	private JMenuItem saveItem;
 	private JMenuItem saveAllItem;
 	private JMenuItem closeItem;
+	private JMenuItem closeAllItem;
 	private JMenuItem exitItem;
 	//----------编辑菜单-------
 	private JMenu editMenu;
@@ -57,11 +60,8 @@ public class MainFrame extends JFrame{
 	//---------设置菜单-------
 	private JMenu settingMenu;
 	/*******设置菜单项*******/
-	//字体，主题（黑白）
+	//字体
 	private JMenuItem fontItem;
-	private JMenu themeItem;
-	private JMenuItem blackItem;
-	private JMenuItem whiteItem;
 	//--------帮助菜单-----------
 	private JMenu helpMenu;
 	/*******帮助菜单项*******/
@@ -69,15 +69,22 @@ public class MainFrame extends JFrame{
 	private JMenuItem aboutItem;
 	private JMenuItem authorItem;
 	/*****文本编辑区********/
+	//撤销重做管理器
+	private final UndoManager undoManager = new UndoManager();
+	private UndoableEditListener editListener = new UndoableEditListener() {
+		@Override
+		public void undoableEditHappened(UndoableEditEvent e) {
+			if(e.getEdit().isSignificant())
+			undoManager.addEdit(e.getEdit());
+		}
+	};
+	//查找时高亮显示器
+	Highlighter highlighter;
 	private int lineNum=30;
 	public static Font font = new Font("微软雅黑 Light", Font.PLAIN, 15);
 	private JTabbedPane editTabbedPane;
 	private List<EditScrollPane> editPaneList = new ArrayList<>();
 	//编辑区的右键菜单
-	private JPopupMenu popupMenu;
-	private JMenuItem closeSelfItem;
-	private JMenuItem closeOthersItem;
-	private JMenuItem closeALLItem;
 	private JPopupMenu textPaneMenu;
 	private JMenuItem textCopyItem;
 	private JMenuItem textCutItem;
@@ -110,9 +117,6 @@ public class MainFrame extends JFrame{
 	List<Token> tokens;
 	Parser parser;
 	Sematics sematics;
-	
-	//撤销功能
-	private UndoManager um;
 	/**
 	 * 构造函数
 	 * @param title
@@ -159,6 +163,8 @@ public class MainFrame extends JFrame{
 		saveAllItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S,ActionEvent.ALT_MASK));
 		closeItem = new JMenuItem("关闭");
 		closeItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q,ActionEvent.CTRL_MASK));
+		closeAllItem = new JMenuItem("关闭所有");
+		closeItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q,ActionEvent.ALT_MASK));
 		exitItem = new JMenuItem("退出");
 		exitItem.addActionListener(new ActionListener() {
 			@Override
@@ -172,6 +178,7 @@ public class MainFrame extends JFrame{
 		fileMenu.add(saveItem);
 		fileMenu.add(saveAllItem);
 		fileMenu.add(closeItem);
+		fileMenu.add(closeAllItem);
 		fileMenu.addSeparator();
 		fileMenu.add(exitItem);
 		//初始化编辑菜单
@@ -215,13 +222,7 @@ public class MainFrame extends JFrame{
 		//初始化设置菜单
 		fontItem = new JMenuItem("字体");
 		fontItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_T,ActionEvent.CTRL_MASK));
-		themeItem = new JMenu("主题");
-		blackItem = new JMenuItem("黑");
-		whiteItem = new JMenuItem("白");
-		themeItem.add(blackItem);
-		themeItem.add(whiteItem);
 		settingMenu.add(fontItem);
-		settingMenu.add(themeItem);
 		//初始化帮助菜单
 		aboutItem = new JMenuItem("关于");
 		authorItem = new JMenuItem("作者");
@@ -234,13 +235,6 @@ public class MainFrame extends JFrame{
 		if(editPaneList.size()==0){
 			newFile(null);
 		}
-		popupMenu = new JPopupMenu();
-		closeSelfItem = new JMenuItem("关闭当前页面");
-		closeOthersItem = new JMenuItem("关闭其他页面");
-		closeALLItem = new JMenuItem("关闭所有页面");
-		popupMenu.add(closeSelfItem);
-		popupMenu.add(closeOthersItem);
-		popupMenu.add(closeALLItem);
 		//编辑区右键菜单
         textPaneMenu = new JPopupMenu();
         textCopyItem = new JMenuItem("复制");
@@ -316,8 +310,10 @@ public class MainFrame extends JFrame{
 		saveItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-               int index = editTabbedPane.getSelectedIndex();
-               save(index);
+            	if(editTabbedPane.getTabCount()>0) {
+					int index = editTabbedPane.getSelectedIndex();
+					save(index);
+				}
             }
         });
 		saveAllItem.addActionListener(new ActionListener() {
@@ -329,15 +325,28 @@ public class MainFrame extends JFrame{
 
 			}
 		});
+		closeItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if(editTabbedPane.getTabCount()>0) {
+					int index = editTabbedPane.getSelectedIndex();
+					close(index);
+				}
+			}
+		});
+		closeAllItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				for(int i = 0; i < editTabbedPane.getTabCount(); i++){
+					close(i);
+				}
+			}
+		});
 		lexerItem.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				int index = editTabbedPane.getSelectedIndex();
-				String strpath = editPaneList.get(index).getPath();
-				String strfilename = editPaneList.get(index).getFilename();
-				String path = strpath+strfilename;
 				try{
-					lex(path);
+					lex();
 				}catch (IOException ie){
 
 				}
@@ -347,12 +356,10 @@ public class MainFrame extends JFrame{
 		parserItem.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				int index = editTabbedPane.getSelectedIndex();
-				String strpath = editPaneList.get(index).getPath();
-				String strfilename = editPaneList.get(index).getFilename();
-				String path = strpath+strfilename;
 				try{
-					parse(path);
+					System.out.print("parsing");
+					parse();
+
 				}catch (ParserException pe){
 
 				}catch (IOException ie){
@@ -363,14 +370,8 @@ public class MainFrame extends JFrame{
 		runItem.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e){
-				int index = editTabbedPane.getSelectedIndex();
-				String strpath = editPaneList.get(index).getPath();
-				String strfilename = editPaneList.get(index).getFilename();
-				String path = strpath+strfilename;
 				try{
-					lex(path);
-					parse(path);
-					syntaxRun(path);
+					syntaxRun();
 				}catch (IOException io){
 
 				}catch (ParserException pe){
@@ -405,26 +406,80 @@ public class MainFrame extends JFrame{
 						"蔡中超，2015302580220","作者",JOptionPane.INFORMATION_MESSAGE);
 			}
 		});
-		
 		undoItem.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (um.canUndo()) {
-                    um.undo();
-                    um.undo();
-                }
-            }   
-        });
-
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				undo();
+			}
+		});
 		redoItem.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (um.canRedo()) {
-                    um.redo();
-                    um.redo();
-                }
-            }   
-        });
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				redo();
+			}
+		});
+		copyItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				copy();
+			}
+		});
+		cutItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				cut();
+			}
+		});
+		pasteItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				paste();
+			}
+		});
+		deleteItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				delete();
+			}
+		});
+		findItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				find();
+			}
+		});
+		replaceItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				String replaceWord = find();
+				replace(replaceWord);
+			}
+		});
+		textCopyItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				copy();
+			}
+		});
+		textCutItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				cut();
+			}
+		});
+		textPasteItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				paste();
+			}
+		});
+		textDeleteItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				delete();
+			}
+		});
+
 	}
 
     /**
@@ -436,16 +491,15 @@ public class MainFrame extends JFrame{
 	    	filename = "untitled_"+untitled+".cmm";
 		}
 	    EditScrollPane editorPane = new EditScrollPane();
+	    editorPane.setIschange(true);
 	    editorPane.setFilename(filename);
 	    JScrollPane untitledPane = editorPane.getEditPane();
 	    JTextPane textPane =editorPane.getTextPane();
-	    
 	    //初始化
-	    um = new UndoManager();
-        textPane.getDocument().addUndoableEditListener(um);
 	    editorPane.initialize(lineNum);
 		textPane.setFont(font);
 		textPane.getDocument().addDocumentListener(new SyntaxHighlighter(textPane));
+		textPane.getDocument().addUndoableEditListener(editListener);
         textPane.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseReleased(MouseEvent e) {
@@ -456,7 +510,7 @@ public class MainFrame extends JFrame{
         });
 	    editPaneList.add(editorPane);
 		editTabbedPane.addTab(filename,null,untitledPane,null);
-	    System.out.println(editTabbedPane.getTabCount());
+//	    System.out.println(editTabbedPane.getTabCount());
 		int index = editTabbedPane.indexOfComponent(untitledPane);
 		editTabbedPane.setSelectedIndex(index);
 		//当文本区域内容改变时，设置变化
@@ -465,6 +519,7 @@ public class MainFrame extends JFrame{
 			String filename = editPaneList.get(index).getFilename();
 			@Override
 			public void insertUpdate(DocumentEvent e) {
+				textPane.getHighlighter().removeAllHighlights();
 				lblTitle.setText("*"+filename);
 				editPaneList.get(index).setIschange(true);
 
@@ -479,81 +534,29 @@ public class MainFrame extends JFrame{
 						list.setModel(dlm);
 					}
 				}
-//				StyledDocument oDoc = textPane.getStyledDocument();
-//				StyleContext context = new StyleContext();
-//				StyledDocument nDoc = new DefaultStyledDocument(context);
-//				try {
-//					CodeStyle codeStyle = new CodeStyle(ColorType.WHITE,null);
-//					String paneText =textPane.getText();
-//					String text = oDoc.getText(0, oDoc.getLength());
-//					codeStyle.initCodeStyle(paneText,oDoc);
-//					oDoc.removeDocumentListener(this);
-//					nDoc.addDocumentListener(this);
-//
-//					int off = textPane.getCaretPosition();
-//					textPane.setDocument(nDoc);
-//					textPane.setCaretPosition(off);
-//				} catch (BadLocationException be) {
-//					be.printStackTrace();
-//				} catch (IOException ie){
-//
-//				}finally {
-//					oDoc = null;
-//				}
 			}
 
 			@Override
 			public void removeUpdate(DocumentEvent e) {
+				textPane.getHighlighter().removeAllHighlights();
 				lblTitle.setText("*"+ filename);
 				editPaneList.get(index).setIschange(true);
 			}
 
 			@Override
 			public void changedUpdate(DocumentEvent e) {
-				lblTitle.setText(filename);
-				editPaneList.get(index).setIschange(false);
 
 			}
 		});
 		pnlTab = new JPanel();
 		pnlTab.setOpaque(false);
-		lblTitle = new JLabel(editTabbedPane.getTitleAt(index));
+		lblTitle = new JLabel("*"+filename);
 		lblTitle.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseReleased(MouseEvent e) {
 				int i = editTabbedPane.indexOfTabComponent(e.getComponent().getParent());
 				if(SwingUtilities.isLeftMouseButton(e)){
 					editTabbedPane.setSelectedIndex(i);
-				}
-				if(SwingUtilities.isRightMouseButton(e)){
-					System.out.println(i);
-					popupMenu.show(e.getComponent(),e.getX(),e.getY());
-					closeSelfItem.addMouseListener(new MouseAdapter() {
-						@Override
-						public void mouseReleased(MouseEvent e) {
-							if(SwingUtilities.isLeftMouseButton(e)){
-								System.out.println(i);
-								close(i);
-							}
-						}
-					});
-					closeOthersItem.addActionListener(new ActionListener() {
-						@Override
-						public void actionPerformed(ActionEvent e) {
-							for(int j = 0; j <= editTabbedPane.getTabCount()-1;j++){
-								if (i != j) {
-									close(j);
-								}
-							}
-						}
-					});
-					closeALLItem.addActionListener(new ActionListener() {
-						@Override
-						public void actionPerformed(ActionEvent e) {
-							editTabbedPane.removeAll();
-							editPaneList.clear();
-						}
-					});
 				}
 			}
 		});
@@ -686,56 +689,159 @@ public class MainFrame extends JFrame{
 			editPaneList.remove(index);
 		}
 	}
+	private void undo() {
+		if (undoManager.canUndo()) {
+			try {
+				undoManager.undo();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	private void redo(){
+    	if(undoManager.canRedo()){
+    		try{
+    			undoManager.redo();
+			}catch (Exception e){
+    			e.printStackTrace();
+			}
+		}
+	}
+	private void copy(){
+		editPaneList.get(editTabbedPane.getSelectedIndex()).getTextPane().copy();
+	}
+	private void cut(){
+		editPaneList.get(editTabbedPane.getSelectedIndex()).getTextPane().cut();
+	}
+	private void paste(){
+		editPaneList.get(editTabbedPane.getSelectedIndex()).getTextPane().paste();
+	}
+	private void delete(){
+		editPaneList.get(editTabbedPane.getSelectedIndex()).getTextPane().replaceSelection("");
+	}
+	private String find(){
+		int index = editTabbedPane.getSelectedIndex();
+		JTextPane textPane = editPaneList.get(index).getTextPane();
+		highlighter = textPane.getHighlighter();
+		String text = textPane.getText();
+		System.out.println(text);
+		text = text.replace("\n","");
+		DefaultHighlighter.DefaultHighlightPainter p = new DefaultHighlighter.DefaultHighlightPainter(Color.YELLOW);
+		String findWord = JOptionPane.showInputDialog(getContentPane(),"请输入要查找的字符串：");
+		if(!findWord.equals("")){
+			System.out.println(findWord);
+			int pos = 0;
+			while((pos=text.indexOf(findWord,pos))>=0)
+			{
+				System.out.println(pos);
+				try
+				{
+					highlighter.addHighlight(pos,pos+findWord.length(),p);
+					pos += findWord.length();
+				}
+			catch(BadLocationException e)
+				{
+					e.printStackTrace();
+				}
+			}
+			return findWord;
+
+		}
+		return  null;
+	}
+	private void replace(String findWord){
+		String replaceWord = JOptionPane.showInputDialog(getContentPane(),"输入替换的字符串");
+		JTextPane textPane = editPaneList.get(editTabbedPane.getSelectedIndex()).getTextPane();
+		String text = textPane.getText();
+		if(findWord!=null){
+			textPane.setText(text.replace(findWord,replaceWord));
+		}
+	}
 
 	/**
 	 * 词法分析
-	 * @param path
 	 * @throws FileNotFoundException
 	 * @throws IOException
 	 */
-	public void lex(String path)throws FileNotFoundException,IOException{
+	public void lex()throws FileNotFoundException,IOException{
+		int index = editTabbedPane.getSelectedIndex();
+		String path;
+		if(editPaneList.get(index).isIschange()) {
+			int select = JOptionPane.showConfirmDialog(getContentPane(), "当前文档已被修改，是否保存后再运行？", "警告", JOptionPane.OK_CANCEL_OPTION);
+			switch (select) {
+				case JOptionPane.OK_OPTION:
+					save(index);
+					path = editPaneList.get(index).getPath() + editPaneList.get(index).getFilename();
+					lexRun(path);
+					break;
+				case JOptionPane.CANCEL_OPTION:
+					break;
+			}
+		}else{
+			path = editPaneList.get(index).getPath() + editPaneList.get(index).getFilename();
+			lexRun(path);
+		}
+	}
+	private void lexRun(String path)throws IOException{
 		lexer = new Lexer(path);
 		tokens = new ArrayList<>();
 		Token token = lexer.nextToken();
-		while(token.getTokenType()!=TokenType.END_OF_DOC){
+		while (token.getTokenType() != TokenType.END_OF_DOC) {
 			tokens.add(token);
 			token = lexer.nextToken();
 		}
 		DefaultMutableTreeNode lexNode = new DefaultMutableTreeNode("词法分析结果");
-		for(Token t:tokens){
+		for (Token t : tokens) {
 			DefaultMutableTreeNode tokenNode = new DefaultMutableTreeNode(t.getTokenType());
-			DefaultMutableTreeNode lineNode = new DefaultMutableTreeNode("行号: "+t.getLineNum());
-			DefaultMutableTreeNode positionNode = new DefaultMutableTreeNode("位置: "+t.getPosition());
-			DefaultMutableTreeNode valueNode = new DefaultMutableTreeNode("值: "+t.getValue());
+			DefaultMutableTreeNode lineNode = new DefaultMutableTreeNode("行号: " + t.getLineNum());
+			DefaultMutableTreeNode positionNode = new DefaultMutableTreeNode("位置: " + t.getPosition());
+			DefaultMutableTreeNode valueNode = new DefaultMutableTreeNode("值: " + t.getValue());
 			tokenNode.add(lineNode);
 			tokenNode.add(positionNode);
 			tokenNode.add(valueNode);
 			lexNode.add(tokenNode);
 		}
 		JTree lexerTree = new JTree(lexNode);
-		analysisPane.setComponentAt(0,new JScrollPane(lexerTree));
+		analysisPane.setComponentAt(0, new JScrollPane(lexerTree));
 		analysisPane.setSelectedIndex(0);
 	}
 
 	/**
 	 * 语法分析
-	 * @param path
 	 * @throws IOException
 	 * @throws ParserException
 	 */
-	private void parse(String path)throws IOException,ParserException{
+	private void parse()throws IOException,ParserException{
+		int index = editTabbedPane.getSelectedIndex();
+		String path;
+		if(editPaneList.get(index).isIschange()){
+			int select = JOptionPane.showConfirmDialog(getContentPane(),"当前文档已被修改，是否保存后再运行？","警告",JOptionPane.OK_CANCEL_OPTION);
+			switch (select){
+				case JOptionPane.OK_OPTION:
+					save(index);
+					path = editPaneList.get(index).getPath()+ editPaneList.get(index).getFilename();
+					parseRun(path);
+					break;
+				case JOptionPane.CANCEL_OPTION:
+					break;
+			}
+		}else{
+			path = editPaneList.get(index).getPath()+editPaneList.get(index).getFilename();
+			parseRun(path);
+		}
+	}
+	private void parseRun(String path)throws ParserException,IOException{
 		parser = new Parser(path);
 		TreeNode root = parser.parseProgram();
 		DefaultMutableTreeNode parseNode = parseChild(root);
 		JTree parseTree = new JTree(parseNode);
 		JScrollPane parPane = new JScrollPane(parseTree);
 		parPane.setHorizontalScrollBarPolicy(
-				JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+				JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 		parPane.setVerticalScrollBarPolicy(
-				JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
-		analysisPane.setComponentAt(1,parPane);
+				JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+		analysisPane.setComponentAt(1, parPane);
 		analysisPane.setSelectedIndex(1);
-
 	}
 	private DefaultMutableTreeNode parseChild(TreeNode root){
 		DefaultMutableTreeNode rootNode = new DefaultMutableTreeNode(root.getValue());
@@ -744,12 +850,41 @@ public class MainFrame extends JFrame{
 		}
 		return rootNode;
 	}
-	private void syntaxRun(String path)throws Exception{
-		tabConsolePane.setText(null);
-		sematics = new Sematics(path);
-		sematics.start();
+
+	/**
+	 *	运行
+	 * @throws Exception
+	 */
+	private void syntaxRun()throws Exception{
+		int index = editTabbedPane.getSelectedIndex();
+		String path;
+		if(editPaneList.get(index).isIschange()){
+			int select = JOptionPane.showConfirmDialog(getContentPane(),"当前文档已被修改，是否保存后再运行？","警告",JOptionPane.OK_CANCEL_OPTION);
+			switch (select){
+				case JOptionPane.OK_OPTION:
+					save(index);
+					path = editPaneList.get(index).getPath()+editPaneList.get(index).getFilename();
+					tabConsolePane.setText(null);
+					tabErrorPane.setText(null);
+					lexRun(path);
+					parseRun(path);
+					sematics = new Sematics(path);
+					sematics.start();
+					break;
+				case JOptionPane.CANCEL_OPTION:
+					break;
+			}
+		}else{
+			path = editPaneList.get(index).getPath()+editPaneList.get(index).getFilename();
+			tabConsolePane.setText(null);
+			sematics = new Sematics(path);
+			sematics.start();
+		}
 	}
 
+	/**
+	 * 字体设置
+	 */
 	private void setFont(){
 		font = JFontDialog
 				.showDialog(getContentPane(), "字体设置", true, getFont());
@@ -761,15 +896,14 @@ public class MainFrame extends JFrame{
 		}
 
 	}
+
+	/**
+	 * 主函数
+	 * @param args
+	 */
 	public static void main(String[] args) {
 		MainFrame frame = new MainFrame("CMM解释器");
 		frame.setFont(new Font("微软雅黑", Font.PLAIN, 15));
-		if(("/*\n" +
-				"output:\n" +
-				"报错:报错信息可能各异\n" +
-				"*/").matches("/\\*(\\s|.)*?\\*/")){
-			System.out.print("pipei");
-		}
 
 	}
 }
