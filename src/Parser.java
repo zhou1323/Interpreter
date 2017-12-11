@@ -101,10 +101,12 @@ public class Parser{
             getTokenListIterator().next();
         }else{
             Token token = getTokenListIterator().next();
-            String errMsg="Line:"+token.getLineNum()+
-                    ", Position:"+token.getPosition()+"; unexpected token";
-            Redirector.updateErrorPane(errMsg);
-            throw new ParserException(errMsg);
+            try{throw new ParserException("Line:"+token.getLineNum()+
+                    ", Position:"+token.getPosition()+"; unexpected token");}
+            catch (Exception e){
+            	Redirector.updateErrorPane(e.getMessage());
+                e.printStackTrace();
+            }
         }
     }
 
@@ -157,6 +159,9 @@ public class Parser{
                 case BREAK:
                     childNode = parseBreakStmt();
                     break;
+                case RETURN:
+                    childNode=parseReturnStmt();
+                    break;
                 case L_BRACE:
                     childNode = parseStmtBlock();
                     break;
@@ -180,7 +185,7 @@ public class Parser{
                 case END_OF_DOC:
 
                 default:
-                	throw new ParserException("");
+                    throw new ParserException("");
             }
 
             childNode.setParent(stmtNode);
@@ -189,6 +194,18 @@ public class Parser{
 
     }
 
+    private TreeNode parseReturnStmt()throws ParserException{
+        TreeNode returnStmtNode = new TreeNode(NodeType.RETURN_STMT,"return_stmt",null,getCurrToken().getLineNum(), getCurrToken().getPosition());
+        List<TreeNode> children = returnStmtNode.getChildren();
+        consumeNextToken(TokenType.RETURN);
+        String value=getNextTokenValue();
+        consumeNextToken(TokenType.IDENT);
+        consumeNextToken(TokenType.SEMICOLON);
+        children.add(new TreeNode(NodeType.RETURN,"return",returnStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
+        children.add(new TreeNode(NodeType.IDENT,value,returnStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
+        children.add(new TreeNode(NodeType.SEMICOLON,";",returnStmtNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
+        return returnStmtNode;
+    }
     //ForStmt-> for ( Decl|Assign;LogExpr;var++|var--)Stmt
     private TreeNode parseForStmt() throws ParserException{
         TreeNode forStmtNode = new TreeNode(NodeType.FOR_STMT,"for_stmt",null,getCurrToken().getLineNum(), getCurrToken().getPosition());
@@ -826,10 +843,8 @@ public class Parser{
             logOpChildren.add(new TreeNode(NodeType.NOT_EQUAL,"!=",logOpNode,getCurrToken().getLineNum(), getCurrToken().getPosition()));
         }else{
             Token token = getTokenListIterator().next();
-            String errMsg="Line:"+token.getLineNum()+
-                    ", Position:"+token.getPosition()+"; should be logical operator";
-            Redirector.updateErrorPane(errMsg);
-            throw new ParserException(errMsg);
+            throw new ParserException("Line:"+token.getLineNum()+
+                    ", Position:"+token.getPosition()+"; should be logical operator");
         }
         return logOpNode;
     }

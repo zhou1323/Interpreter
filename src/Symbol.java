@@ -9,12 +9,13 @@ public class Symbol {
 	private List<Object> value=new ArrayList<Object>();
 	private int arrayIndex;
 	private  String funcName;
+	private String idOrArray;
 	
 	public Symbol() {
 		;
 	}
 	
-	public Symbol(String type, String name, int scale, List<Object> value, int arrayIndex,String funcName) {
+	public Symbol(String type, String name, int scale, List<Object> value, int arrayIndex,String funcName,String idOrArray) {
 		super();
 		this.type = type;
 		this.name = name;
@@ -22,6 +23,7 @@ public class Symbol {
 		this.value = value;
 		this.arrayIndex = arrayIndex;
 		this.funcName=funcName;
+		this.idOrArray=idOrArray;
 	}
 	
 	public String getType() {
@@ -35,6 +37,12 @@ public class Symbol {
 	}
 	public void setFuncName(String funcName) {
 		this.funcName = funcName;
+	}
+	public String getIdOrArray() {
+		return idOrArray;
+	}
+	public void setIdOrArray(String idOrArray) {
+		this.idOrArray = idOrArray;
 	}
 	public String getName() {
 		return name;

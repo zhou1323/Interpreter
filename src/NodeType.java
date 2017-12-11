@@ -18,6 +18,7 @@ public enum NodeType {
     WRITE_STMT,   //write”Ôæ‰
     READ_STMT,   //read”Ôæ‰
     FUNCTION_STMT,
+    RETURN_STMT,
     FUN_VARLIST,
     CALL_STMT,
     ASSIGN_STMT,   //∏≥÷µ”Ôæ‰
@@ -26,6 +27,7 @@ public enum NodeType {
     ARI_EXPR_PRIME,
     TERM,   //
     TERM_PRIME,   //
+    RETURN,
     FACTOR,   //
     LOG_EXPR,   //¬ﬂº≠±Ì¥Ô Ω
     LOG_OP,   //

@@ -14,7 +14,7 @@ public enum TokenType {
     //保留字
     IF, ELSE, FOR,WHILE, READ, WRITE, INT, DOUBLE, BREAK, TRUE, FALSE, BOOL,FUNCTION,
     //变量 文档结束符 数字
-    IDENT, END_OF_DOC, INT_NUM, DOUBLE_NUM,
+    IDENT, END_OF_DOC, INT_NUM, DOUBLE_NUM,RETURN,
     //错误字符
     ERR_TOKEN
 }
