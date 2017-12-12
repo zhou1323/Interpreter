@@ -6,6 +6,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Scanner;
 
+import Parser.Parser;
+import Parser.TreeNode;
+import Semantics.Semantics;
+import Semantics.SymbolTable;
+
 /**
  * Created by superman on 2017/10/12.
  */
@@ -39,7 +44,7 @@ public class test {
     }
 
     public static void sematics(String path) throws Exception {
-    	Sematics s=new Sematics(path);
+    	Semantics s=new Semantics(path);
     	SymbolTable symbols=s.getTable();
     	symbols.printTable();
     	//TreeNode treeNode = s.getParser().parseProgram();
