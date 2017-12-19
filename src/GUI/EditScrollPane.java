@@ -43,26 +43,6 @@ public class EditScrollPane extends Component {
     	list.setBackground(new Color(228, 228, 228));
     	list.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 16));
     	list.setPreferredSize(new Dimension(50, 9999));
-    	
-    	/*list.addMouseListener(new MouseAdapter() {
-			public void mouseReleased(MouseEvent e) {
-				if(e.getClickCount()%2==0) {
-					String poString=" •";
-					int index=list.getSelectedIndex();
-					Object value=list.getSelectedValue();
-					if(!marks.contains(index)) {
-						value+=poString;
-						marks.add(index);
-					}
-					else {
-						value=value.toString().substring(0,value.toString().length()-poString.length());
-						marks.remove(index);
-					}
-					dlm.setElementAt(value, index);
-					list.setModel(dlm);
-				}
-			}
-		});*/
     	this.editPane.setRowHeaderView(list);
     }
     

@@ -68,6 +68,10 @@ public class Semantics extends Thread{
 		mode=1;
 	}
 
+	private int nowLine;
+	public int getNowLine() {
+		return nowLine;
+	}
 	public void run(){
 		try {
 			if (!root.getChildren().isEmpty()) {
@@ -76,6 +80,7 @@ public class Semantics extends Thread{
 				}
 			}
 		}catch (Exception e) {
+			Redirector.updateErrorPane(e.getMessage());
 			e.printStackTrace();
 		}
 	}
@@ -85,15 +90,18 @@ public class Semantics extends Thread{
 	public void stmt(TreeNode t) throws Exception {
 		TreeNode temp = t.getChildren().get(0);
 		if (temp.getNodeType().equals(NodeType.VAR_DECL)) {
+			if(mode!=0) {
+				nowLine=temp.getLineNum();
+				readMode();
+			}
 			decl_stmt(temp);
-			if(mode!=0) {
-				readMode();
-			}
+			
 		} else if (temp.getNodeType().equals(NodeType.ASSIGN_STMT)) {
-			assign_stmt(temp);
 			if(mode!=0) {
+				nowLine=temp.getLineNum();
 				readMode();
 			}
+			assign_stmt(temp);
 		} else if (temp.getNodeType().equals(NodeType.IF_STMT)) {
 			scale++;
 			if_stmt(temp);
@@ -107,34 +115,44 @@ public class Semantics extends Thread{
 			while_stmt(temp);
 			scale--;
 		} else if (temp.getNodeType().equals(NodeType.CALL_STMT)) {
+			if(mode!=0) {
+				nowLine=temp.getLineNum();
+				readMode();
+			}
 			call_stmt(temp);
-			if(mode!=0) {
-				readMode();
-			}
 		} else if (temp.getNodeType().equals(NodeType.FUNCTION_STMT)) {
+			if(mode!=0) {
+				nowLine=temp.getLineNum();
+				readMode();
+			}
 			func_stmt(temp);
-			if(mode!=0) {
-				readMode();
-			}
 		} else if (temp.getNodeType().equals(NodeType.READ_STMT)) {
+			if(mode!=0) {
+				nowLine=temp.getLineNum();
+				readMode();
+			}
 			read_stmt(temp);
-			if(mode!=0) {
-				readMode();
-			}
 		} else if (temp.getNodeType().equals(NodeType.WRITE_STMT)) {
+			if(mode!=0) {
+				nowLine=temp.getLineNum();
+				readMode();
+			}
 			write_stmt(temp);
-			if(mode!=0) {
-				readMode();
-			}
+			
 		} else if (temp.getNodeType().equals(NodeType.RETURN_STMT)) {
-			return_stmt(temp);
 			if(mode!=0) {
+				nowLine=temp.getLineNum();
 				readMode();
 			}
+			return_stmt(temp);
 		} else if (temp.getNodeType().equals(NodeType.STMT_BLOCK)) {
 			block_stmt(temp);
 		} else if (temp.getNodeType().equals(NodeType.BREAK_STMT)) {
 			if (isInLoop > 0) {
+				if(mode!=0) {
+					nowLine=temp.getLineNum();
+					readMode();
+				}
 				break_stmt(temp);
 			} else {
 				/*
@@ -143,6 +161,7 @@ public class Semantics extends Thread{
 				try{throw new Exception("Line: " + temp.getLineNum() + ", Position: " + temp.getPosition()
 						+ ", The 'Break' can only been used in circular statement !");}
 				catch (Exception e){
+					Redirector.updateErrorPane(e.getMessage());
 					e.printStackTrace();
 				}
 			}
@@ -296,6 +315,7 @@ public class Semantics extends Thread{
 						try{throw new Exception("Line: " + fNode.getLineNum() + ", Position: " + fNode.getPosition()
 								+ ", The type of your input number can't match with the identity type of the function!");}
 						catch (Exception e){
+							Redirector.updateErrorPane(e.getMessage());
 							e.printStackTrace();
 						}
 					}
@@ -306,6 +326,7 @@ public class Semantics extends Thread{
 				try{throw new Exception("Line: " + funName.getLineNum() + ", Position: " + funName.getPosition()
 						+ ", The function has not been declared!");}
 				catch (Exception e){
+					Redirector.updateErrorPane(e.getMessage());
 					e.printStackTrace();
 				}
 			}
@@ -314,6 +335,7 @@ public class Semantics extends Thread{
 			try{throw new Exception("Line: " + t.getLineNum() + ", Position: " + t.getPosition()
 					+ ", The function has not been declared!");}
 			catch (Exception e){
+				Redirector.updateErrorPane(e.getMessage());
 				e.printStackTrace();
 			}
 		}
@@ -382,10 +404,11 @@ public class Semantics extends Thread{
 			int childNumber = t.getChildren().size();
 			TreeNode ifStmtNode = t.getNthChild(4);
 			// if(conditionNode)
-			boolean c = judgeCondition(conditionNode);
 			if(mode!=0) {
 				readMode();
 			}
+			boolean c = judgeCondition(conditionNode);
+			
 			if (c) {
 				stmt(ifStmtNode);
 			} else {
@@ -411,10 +434,13 @@ public class Semantics extends Thread{
 					assign_stmt(assignNode);
 				else
 					decl_stmt(assignNode);
-				boolean c = judgeCondition(conditionNode);
 				if(mode!=0) {
+					nowLine=conditionNode.getLineNum();
+					System.out.println(nowLine);
 					readMode();
 				}
+				boolean c = judgeCondition(conditionNode);
+				
 				isInLoop++;
 				scale++;
 				while (c) {
@@ -428,10 +454,13 @@ public class Semantics extends Thread{
 					if (isbreak > 0)
 						break;
 					assign_stmt(addNode);
-					c = judgeCondition(conditionNode);
 					if(mode!=0) {
+						nowLine=conditionNode.getLineNum();
+						System.out.println(nowLine);
 						readMode();
 					}
+					c = judgeCondition(conditionNode);
+					
 				}
 				scale--;
 				isInLoop--;
@@ -454,6 +483,7 @@ public class Semantics extends Thread{
 			TreeNode conditionNode = t.getNthChild(2);
 			boolean istrue = judgeCondition(conditionNode);
 			if(mode!=0) {
+				nowLine=conditionNode.getLineNum();
 				readMode();
 			}
 			TreeNode whileStmtNode = t.getChildren().get(4);
@@ -471,10 +501,12 @@ public class Semantics extends Thread{
 				stmt(whileStmtNode);
 				if (isbreak > 0)
 					break;
-				istrue = judgeCondition(conditionNode);
 				if(mode!=0) {
+					nowLine=conditionNode.getLineNum();
 					readMode();
 				}
+				istrue = judgeCondition(conditionNode);
+				
 			}
 			isInLoop--;
 			isbreak--;
@@ -627,8 +659,8 @@ public class Semantics extends Thread{
 					TreeNode findex = tindex.getFirstChild();
 					String index = findex.getFirstChild().getValue();
 					//
-					if (findex.getFirstChild().getFirstChild().getNodeType()==NodeType.IDENT) {
-						if(table.contains(findex.getFirstChild().getFirstChild().getValue())){
+					if (fNode.getFirstChild().getNodeType()==NodeType.IDENT) {
+						if(table.contains(fNode.getFirstChild().getValue())){
 						String s = calAriExpr(variable).getValue();
 						Redirector.updateConsolePane(s);}
 						else{
@@ -646,16 +678,28 @@ public class Semantics extends Thread{
 							Redirector.updateConsolePane(ta.get(i).toString());
 					}
 				}
-				else if(table.contains(fNode.getFirstChild().getValue())&&(variable.getChildren().size()!=1&&variable.getFirstChild().getChildren().size()!=1)){
+				else if(table.contains(fNode.getFirstChild().getValue())&&variable.getFirstChild().getChildren().size()==1){
 					//TreeNode fNode=tNode.getFirstChild();
-					List<Object> ta=table.get(fNode.getFirstChild().getValue()).getValue();
-					//for(int i=0;i<ta.size();i++){
-					//	String s=ta.get(i).toString();
-					if(table.get(fNode.getFirstChild().getValue()).getIdOrArray().equals("id"))
-					Redirector.updateConsolePane(ta.get(0).toString());
-					else if(table.get(fNode.getFirstChild().getValue()).getIdOrArray().equals("array"))
-						Redirector.updateConsolePane(ta.toString());
-					//}
+					if(variable.getValue().equals("E")&&variable.getChildren().size()==3){
+						String s = calAriExpr(variable).getValue();
+						Redirector.updateConsolePane(s);
+					}
+					else {
+						List<Object> ta=table.get(fNode.getFirstChild().getValue()).getValue();
+						//for(int i=0;i<ta.size();i++){
+						//	String s=ta.get(i).toString();
+						if(table.get(fNode.getFirstChild().getValue()).getIdOrArray()==null) {
+							Redirector.updateConsolePane(ta.get(0).toString());
+						}
+						else {
+							if(table.get(fNode.getFirstChild().getValue()).getIdOrArray().equals("id"))
+								Redirector.updateConsolePane(ta.get(0).toString());
+							else if(table.get(fNode.getFirstChild().getValue()).getIdOrArray().equals("array"))
+								Redirector.updateConsolePane(ta.toString());
+						//}
+						}
+					}
+					
 				}
 				else if(table.contains(fNode.getFirstChild().getValue())){
 					String s = calAriExpr(variable).getValue();
@@ -878,9 +922,9 @@ public class Semantics extends Thread{
 							/*
 							 * errMsg = "数组长度必须为整数!"; System.out.println(errMsg); return;
 							 */
-							try{throw new Exception("Line: " + index.getLineNum() + ", Position: " + index.getPosition()
+							try{throw new ParserException("Line: " + index.getLineNum() + ", Position: " + index.getPosition()
 									+ ",  The length of the array should be an integer!");}
-							catch (Exception e){
+							catch (ParserException e){
 								Redirector.updateErrorPane(e.getMessage());
 								e.printStackTrace();
 							}
@@ -937,6 +981,7 @@ public class Semantics extends Thread{
 								try{throw new Exception("Line: " + factor.getLineNum() + ", Position: "
 										+ (factor.getPosition() + 1) + ",  The array is out of bound!");}
 								catch (Exception e){
+									Redirector.updateErrorPane(e.getMessage());
 									e.printStackTrace();
 								}
 							}
@@ -949,6 +994,7 @@ public class Semantics extends Thread{
 						try{throw new Exception("Line: " + factor.getLineNum() + ", Position: " + factor.getPosition()
 								+ ",  The type of identifier is wrong!");}
 						catch (Exception e){
+							Redirector.updateErrorPane(e.getMessage());
 							e.printStackTrace();
 						}
 					}
@@ -957,15 +1003,15 @@ public class Semantics extends Thread{
 		}
 	}
 
-	// 符号表中存储的变量和节点变量类型相同时,返回节点的值.
+	// When type of the variable stored in the symbol table is same as the factor transferr符号表中存储的变量和节点变量类型相同时,返回节点的值.
 	public List<Object> matchType(TreeNode factor) {
 		List<Object> result = new ArrayList<Object>();
-		// 通过参数赋值
+		// assign by variable
 		if (factor.getNodeType().equals(NodeType.IDENT)) {
 			List<Object> value = table.get(factor.getValue()).getValue();
 			result = value;
 		}
-		// 直接赋值
+		// assign directly
 		else
 			result.add(factor.getValue());
 
@@ -992,6 +1038,7 @@ public class Semantics extends Thread{
 				try{throw new Exception("Line: " + t.getLineNum() + ", Position: " + t.getPosition() + ",  The identifier "
 						+ t.getValue() + " has not been declared!");}
 				catch (Exception e){
+					Redirector.updateErrorPane(e.getMessage());
 					e.printStackTrace();
 				}
 			}
@@ -1157,6 +1204,7 @@ public class Semantics extends Thread{
 				try{throw new Exception("Line: " + t.getNthChild(0).getLineNum() + ", Position: "
 						+ (t.getNthChild(0).getPosition() - 1) + ",  The identifier " + id + " has not been declared!");}
 				catch (Exception e){
+					Redirector.updateErrorPane(e.getMessage());
 					e.printStackTrace();
 				}
 			}
@@ -1168,11 +1216,23 @@ public class Semantics extends Thread{
 				} else if (table.get(id).getType().equals("double")) {
 					isInt = false;
 				}
-				return table.get(id).getValue().get(arrnum).toString();
+				if(arrnum<table.get(id).getArrayIndex()) {
+					return table.get(id).getValue().get(arrnum).toString();
+					
+				}
+				else {
+					try{throw new Exception("Line: " + t.getNthChild(2).getLineNum() + ", Position: "
+							+ t.getNthChild(2).getPosition() + ",  Out of index!");}
+					catch (Exception e){
+						Redirector.updateErrorPane(e.getMessage());
+						e.printStackTrace();
+					}
+				}
 			} else {
 				try{throw new Exception("Line: " + t.getNthChild(2).getLineNum() + ", Position: "
 						+ t.getNthChild(2).getPosition() + ",  The array has not been declared!");}
 				catch (Exception e){
+					Redirector.updateErrorPane(e.getMessage());
 					e.printStackTrace();
 				}
 				/*

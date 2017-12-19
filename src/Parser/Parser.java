@@ -191,13 +191,17 @@ public class Parser{
                 case END_OF_DOC:
 
                 default:
-                    throw new ParserException("");
+                   // throw new ParserException("");
+                	Token token = getTokenListIterator().next();
+                	throw new ParserException("Line:"+token.getLineNum()+
+                            ", Position:"+token.getPosition()+"; unexpected token");
+                    
             }
 
             childNode.setParent(stmtNode);
             stmtNodeChildren.add(childNode);
             return stmtNode;
-
+          
     }
 
     private TreeNode parseReturnStmt()throws ParserException{

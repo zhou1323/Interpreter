@@ -34,7 +34,7 @@ public class JFontDialog extends JDialog
     String fontNames[] = GraphicsEnvironment.getLocalGraphicsEnvironment().
         getAvailableFontFamilyNames();
     private JList listName = new JList(fontNames);
-    String fontStyles[] = { "甯歌顫?","绮椾綋","鏂滀綋","绮楁枩浣?" };
+    String fontStyles[] = { "常规","中" };
     private JList listStyle = new JList(fontStyles);
     String fontSizes[] = {
         "8", "9", "10", "11", "12", "14", "16", "18", "20",
@@ -123,7 +123,7 @@ public class JFontDialog extends JDialog
 
     private void jbInit() throws Exception {
         this.setSize(480, 310);
-        titledBorder1 = new TitledBorder("棰勮");
+        titledBorder1 = new TitledBorder("实例");
         pCenter.setLayout(null);
         txtName.setBackground(Color.white);
         txtName.setEditable(false);
@@ -140,11 +140,11 @@ public class JFontDialog extends JDialog
         pPreview.setBorder(titledBorder1);
         pPreview.setBounds(new Rectangle(174, 170, 193, 98));
         pPreview.setLayout(null);
-        lbName.setText("鍚嶅瓧");
+        lbName.setText("字体");
         lbName.setBounds(new Rectangle(15, 4, 151, 17));
-        lbStyle.setText("椋庢牸");
+        lbStyle.setText("规格");
         lbStyle.setBounds(new Rectangle(174, 4, 123, 17));
-        lbSize.setText("澶у皬");
+        lbSize.setText("字号");
         lbSize.setBounds(new Rectangle(304, 4, 62, 17));
         lbPreview.setBorder(BorderFactory.createLoweredBevelBorder());
         lbPreview.setHorizontalAlignment(SwingConstants.CENTER);
@@ -152,10 +152,10 @@ public class JFontDialog extends JDialog
         lbPreview.setBounds(new Rectangle(10, 23, 171, 61));
         bttOK.setBounds(new Rectangle(379, 21, 79, 22));
         bttOK.setMnemonic('O');
-        bttOK.setText("纭畾(O)");
+        bttOK.setText("确认");
         bttCancel.setBounds(new Rectangle(379, 48, 79, 22));
         bttCancel.setMnemonic('C');
-        bttCancel.setText("鍙栨秷(C)");
+        bttCancel.setText("取消");
         listName.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         listStyle.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         listSize.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -189,7 +189,7 @@ public class JFontDialog extends JDialog
 
     public void setFont(Font f) {
         if (f == null)
-            throw new NullPointerException("閿欒:瀛椾綋涓嶈兘涓虹┖!");
+            throw new NullPointerException("字体异常!");
         listName.setSelectedValue(f.getFamily(), true);
         listStyle.setSelectedIndex(f.getStyle());
         listSize.setSelectedValue("" + f.getSize(), true);

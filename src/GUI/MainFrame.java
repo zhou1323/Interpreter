@@ -93,8 +93,8 @@ public class MainFrame extends JFrame{
 	};
 	//查找时高亮显示器
 	Highlighter highlighter;
-	private int lineNum=30;
-	public static Font font = new Font("微软雅黑 Light", Font.PLAIN, 15);
+	private int lineNum=50;
+	public static Font font = new Font("微软雅黑 Light", Font.PLAIN, 16);
 	private JTabbedPane editTabbedPane;
 	private List<EditScrollPane> editPaneList = new ArrayList<>();
 	//编辑区的右键菜单
@@ -239,8 +239,8 @@ public class MainFrame extends JFrame{
 		runMenu.add(parserItem);
 		runMenu.addSeparator();
 		runMenu.add(runItem);
-		runMenu.add(debugItem);
-		runMenu.add(continueItem);
+		//runMenu.add(debugItem);
+		//runMenu.add(continueItem);
 		//初始化设置菜单
 		fontItem = new JMenuItem("字体");
 		fontItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_T,ActionEvent.CTRL_MASK));
@@ -428,7 +428,9 @@ public class MainFrame extends JFrame{
 		continueItem.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e){
+				editorPane.getList().setSelectedIndex(semantics.getNowLine()-1);
 				semantics.setMode(0);
+				
 			}
 		});
 		fontItem.addActionListener(new ActionListener() {
@@ -533,12 +535,13 @@ public class MainFrame extends JFrame{
     /**
      * 新建文件
      */
+	EditScrollPane editorPane;
 	private void newFile(String filename){
 	    untitled ++;
 	    if(filename==null){
 	    	filename = "untitled_"+untitled+".cmm";
 		}
-	    EditScrollPane editorPane = new EditScrollPane();
+	    editorPane = new EditScrollPane();
 	    editorPane.setIschange(true);
 	    editorPane.setFilename(filename);
 	    JScrollPane untitledPane = editorPane.getEditPane();
